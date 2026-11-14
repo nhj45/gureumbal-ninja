@@ -609,6 +609,39 @@
     sync(); new MutationObserver(sync).observe(inp, { attributes: true, attributeFilter: ['class'] });
   }
   var waitPw = setInterval(function () { if (document.getElementById('lPw')) { clearInterval(waitPw); addEye('lPw'); addEye('lPw2'); } }, 200);
+
+  // ───────── 아이디 칸: 한글 자판으로 쳐도 영어로 바꿔 줘요 (ㄷㄷㅅ → eet) ─────────
+  var KO2EN = (function () {
+    var CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ', JUNG = 'ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ', JONG = ' ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ';
+    var K = { 'ㄱ': 'r', 'ㄲ': 'R', 'ㄴ': 's', 'ㄷ': 'e', 'ㄸ': 'E', 'ㄹ': 'f', 'ㅁ': 'a', 'ㅂ': 'q', 'ㅃ': 'Q', 'ㅅ': 't', 'ㅆ': 'T', 'ㅇ': 'd', 'ㅈ': 'w', 'ㅉ': 'W', 'ㅊ': 'c', 'ㅋ': 'z', 'ㅌ': 'x', 'ㅍ': 'v', 'ㅎ': 'g',
+      'ㅏ': 'k', 'ㅐ': 'o', 'ㅑ': 'i', 'ㅒ': 'O', 'ㅓ': 'j', 'ㅔ': 'p', 'ㅕ': 'u', 'ㅖ': 'P', 'ㅗ': 'h', 'ㅘ': 'hk', 'ㅙ': 'ho', 'ㅚ': 'hl', 'ㅛ': 'y', 'ㅜ': 'n', 'ㅝ': 'nj', 'ㅞ': 'np', 'ㅟ': 'nl', 'ㅠ': 'b', 'ㅡ': 'm', 'ㅢ': 'ml', 'ㅣ': 'l',
+      'ㄳ': 'rt', 'ㄵ': 'sw', 'ㄶ': 'sg', 'ㄺ': 'fr', 'ㄻ': 'fa', 'ㄼ': 'fq', 'ㄽ': 'ft', 'ㄾ': 'fx', 'ㄿ': 'fv', 'ㅀ': 'fg', 'ㅄ': 'qt' };
+    return function (str) {
+      var out = '';
+      for (var i = 0; i < str.length; i++) {
+        var ch = str[i], c = ch.charCodeAt(0);
+        if (c >= 0xAC00 && c <= 0xD7A3) {
+          var n = c - 0xAC00, jo = JONG[n % 28];
+          out += K[CHO[Math.floor(n / 588)]] + K[JUNG[Math.floor((n % 588) / 28)]] + (jo === ' ' ? '' : K[jo]);
+        } else out += K[ch] || ch;
+      }
+      return out.toLowerCase();
+    };
+  })();
+  function fixIdField(id) {
+    var inp = document.getElementById(id); if (!inp || inp.dataset.ko) return;
+    inp.dataset.ko = '1';
+    inp.setAttribute('inputmode', 'email');                       // 폰에서 영어 자판이 먼저 뜨게
+    inp.setAttribute('autocapitalize', 'off'); inp.setAttribute('autocorrect', 'off'); inp.setAttribute('lang', 'en');
+    var fix = function () { var v = inp.value, nv = KO2EN(v); if (nv !== v) inp.value = nv; };
+    inp.addEventListener('compositionend', function () { setTimeout(fix, 0); });
+    inp.addEventListener('input', function (e) { if (!e.isComposing) fix(); });
+    inp.addEventListener('blur', fix);
+    var go = document.getElementById('lGo');
+    if (go) go.addEventListener('pointerdown', fix, true);
+    inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') fix(); }, true);
+  }
+  var waitId = setInterval(function () { if (document.getElementById('lId')) { clearInterval(waitId); fixIdField('lId'); } }, 200);
   var realFetch = window.fetch.bind(window);
   window.fetch = function (input, init) {
     var href = typeof input === 'string' ? input : (input && input.url) || '';
