@@ -1012,13 +1012,13 @@
     if (!window.speechSynthesis) return;
     try {
       speechSynthesis.cancel();
-      var u = new SpeechSynthesisUtterance(text); u.lang = 'ko-KR'; u.rate = 1.05; u.pitch = 0.1; u.volume = 1;
+      var u = new SpeechSynthesisUtterance(text); u.lang = 'ko-KR'; u.rate = 0.88 + Math.random() * 0.12; u.pitch = 0.35 + Math.random() * 0.25; u.volume = 1;
       var vs = speechSynthesis.getVoices().filter(function (v) { return /ko/i.test(v.lang); });
       if (vs.length) u.voice = vs.find(function (v) { return /injoon|hyunsu|minsu|male|남/i.test(v.name) && !/female|여/i.test(v.name); }) || vs[0];
       speechSynthesis.speak(u);
     } catch (_) {}
   }
-  var LINES = { s1: ['흡!', '하앗!', '핫!'], s2: ['어림없다!', '느려!'], s3: ['세 칼 베기!', '칼 세 자루, 각오해라!'], dash: ['베어주마!', '비켜라!', '길은 내가 낸다!'] };
+  var LINES = { s1: ['흡!', '하앗!', '어? 맞았네?', '훗, 역시 나야'], s2: ['어림없다! ...아마도!', '느려! 나도 좀 느리지만!', '멋있었지? 그치?'], s3: ['세 칼 베기! ...세 개 맞지?', '칼 세 자루! 근데 입이 아프다!', '완벽했다! 눈 감고 있었지만!'], dash: ['베어주마! ...누구였더라?', '비켜라! 아니 내가 비킬게!', '간다! 어디로 가는 거지?'] };
   var pickL = function (k) { var a = LINES[k]; return a[Math.floor(Math.random() * a.length)]; };
   if (window.speechSynthesis) { try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = function () {}; } catch (_) {} }
   var hookNinjo = setInterval(function () {
