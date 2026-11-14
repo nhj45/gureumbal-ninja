@@ -223,7 +223,15 @@ $('loginBox').addEventListener('submit', async e => {
   const id = KO2EN($('lid').value.trim()), pw = $('lpw').value;
   try {
     await A.signInWithEmailAndPassword(auth, id + DOMAIN, pw + '#cloud');
-  } catch (err) { $('lerr').textContent = '아이디나 비밀번호가 틀렸어요'; return; }
+  } catch (err) {
+    // 관리자 아이디로 처음 로그인하면 계정을 바로 만들어요
+    if (id + DOMAIN === ADMIN_EMAIL && pw.length >= 4 && /invalid-credential|user-not-found|invalid-login/.test(err.code || '')) {
+      try {
+        const c = await A.createUserWithEmailAndPassword(auth, id + DOMAIN, pw + '#cloud');
+        await F.setDoc(F.doc(db, 'users', c.user.uid), { id, nick: '관리자', save: null, updated: Date.now() });
+      } catch (e2) { $('lerr').textContent = '아이디나 비밀번호가 틀렸어요'; return; }
+    } else { $('lerr').textContent = '아이디나 비밀번호가 틀렸어요'; return; }
+  }
   $('lpw').value = '';
 });
 $('logoutBtn').addEventListener('click', () => A.signOut(auth));
