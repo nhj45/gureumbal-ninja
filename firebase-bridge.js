@@ -144,7 +144,7 @@
       return out(200, { ok: true, at: now });
     }
 
-    if (route === 'POST /api/logout') { ADMIN = false; updateAdminBtn(); await A.signOut(auth); return out(200, { ok: true }); }
+    if (route === 'POST /api/logout') { stopWatch(); clearInterval(pollTimer); ADMIN = false; updateAdminBtn(); await A.signOut(auth); return out(200, { ok: true }); }
 
     if (route === 'POST /api/nick') {
       var n2 = cleanNick(body.nick);
@@ -191,22 +191,32 @@
     clearInterval(pollTimer);
     pollTimer = setInterval(function () { poll(x); }, 20000);
     setTimeout(function () { poll(x); }, 2500);
+    // 관리자가 선물을 주거나 정지하면 바로 알 수 있게 실시간으로 지켜봐요
+    stopWatch();
+    watchers = [
+      x.F.onSnapshot(x.F.collection(x.db, 'users', u.uid, 'gifts'), function (s) { if (s.docs.length) setTimeout(function () { poll(x); }, 400); }, function () {}),
+      x.F.onSnapshot(x.F.doc(x.db, 'bans', u.uid), function (s) { if (s.exists()) setTimeout(function () { poll(x); }, 100); }, function () {})
+    ];
   }
+  var watchers = [];
+  function stopWatch() { watchers.forEach(function (f) { try { f(); } catch (_) {} }); watchers = []; }
 
-  var polling = false;
+  var polling = false, pollAgain = false, pollWait = 0;
   async function poll(x) {
     var u = x.auth.currentUser;
     if (!u) { clearInterval(pollTimer); return; }
-    if (g('PROFILE') !== '@server' || polling) return;
-    polling = true;
+    if (polling) { pollAgain = true; return; }
+    if (g('PROFILE') !== '@server') { if (pollWait++ < 20) setTimeout(function () { poll(x); }, 1000); return; }
+    pollWait = 0; polling = true;
     try {
       var ban = await x.F.getDoc(x.F.doc(x.db, 'bans', u.uid));
       if (ban.exists()) {
-        clearInterval(pollTimer);
+        clearInterval(pollTimer); stopWatch(); polling = false;
         var why = (ban.data() && ban.data().reason) || '';
         var msg = '이 계정은 관리자에 의해 정지됐어요' + (why ? ' (' + why + ')' : '');
         try { await g('logout')(); } catch (_) {}
         try { document.getElementById('lErr').textContent = msg; } catch (_) {}
+        popup(ICON_HORN, '계정 정지', [h(msg)]);
         return;
       }
       var gs = await x.F.getDocs(x.F.collection(x.db, 'users', u.uid, 'gifts'));
@@ -224,10 +234,11 @@
         try { g('persist')(); } catch (_) {}
         try { g('refreshLobby')(); } catch (_) {}
         try { g('SFX').buy(); } catch (_) {}
-        try { g('showLobbyMsg')('관리자 선물 도착! 코인 +' + total + (note ? ' · ' + note : '')); } catch (_) {}
+        popup(ICON_GIFT, '관리자 선물 도착!', ['<b>엽전 +' + total + '</b>'].concat(note ? [h(note)] : []));
       }
     } catch (_) { }
     polling = false;
+    if (pollAgain) { pollAgain = false; setTimeout(function () { poll(x); }, 300); }
   }
 
   function updateAdminBtn() {
@@ -372,13 +383,16 @@
   var ICON_HORN = '<svg viewBox="0 0 64 64" width="64" height="64"><path d="M10 26h10l26-14v40L20 38H10z" fill="#8fd3ff" stroke="#141418" stroke-width="3.5" stroke-linejoin="round"/><path d="M20 38l4 14h8l-3-12" fill="#5b6cff" stroke="#141418" stroke-width="3.5" stroke-linejoin="round"/><path d="M52 24c4 4 4 12 0 16" fill="none" stroke="#141418" stroke-width="3.5" stroke-linecap="round"/></svg>';
   var ICON_STAR = '<svg viewBox="0 0 64 64" width="64" height="64"><path d="m32 6 7.6 16 17.4 2.3-12.8 12 3.3 17.2L32 45l-15.5 8.5 3.3-17.2L7 24.3 24.4 22z" fill="#ffd84a" stroke="#141418" stroke-width="3.5" stroke-linejoin="round"/></svg>';
 
-  function popup(icon, title, lines) {
-    var old = document.getElementById('cnPop'); if (old) old.remove();
+  var popQ = [];
+  function popup(icon, title, lines) {                      // 여러 개가 한꺼번에 오면 차례대로 보여줘요
+    if (document.getElementById('cnPop')) { popQ.push([icon, title, lines]); return; }
     var d = document.createElement('div'); d.id = 'cnPop';
     d.innerHTML = '<div class="pc">' + icon + '<div class="pt">' + h(title) + '</div><div class="pl">' + lines.join('<br>') + '</div><button>좋아!</button></div>';
-    d.querySelector('button').addEventListener('click', function () { try { g('SFX').click(); } catch (_) {} d.remove(); });
+    var close = function () { if (!d.parentNode) return; d.remove(); var n = popQ.shift(); if (n) setTimeout(function () { popup(n[0], n[1], n[2]); }, 150); };
+    d.querySelector('button').addEventListener('click', function () { try { g('SFX').click(); } catch (_) {} close(); });
     document.body.appendChild(d);
-    setTimeout(function () { if (d.parentNode) d.remove(); }, 14000);
+    try { g('vib')(30); } catch (_) {}
+    setTimeout(close, 14000);
   }
 
   var fmtLeft = function (ms) {
@@ -450,6 +464,7 @@
     var prevEv = LIVE.event;
     LIVE = { notice: d.notice || '', bcast: d.bcast || null, event: d.event || null, gift: d.gift || null };
     renderLobbyLive();
+    if (LIVE.notice && !seen('notice', LIVE.notice)) popup(ICON_HORN, '새 공지', [h(LIVE.notice)]);
     var bc = LIVE.bcast;
     if (bc && bc.text && (!bc.until || bc.until > Date.now()) && !seen('bc', bc.id)) {
       showBand(bc.text);
