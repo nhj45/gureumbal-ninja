@@ -239,6 +239,15 @@
         var d = gs.docs[i], v = d.data();
         await x.F.deleteDoc(d.ref);
         var c = Math.floor(Number(v.coins) || 0);
+        if (v.char && NINJAS.some(function (n) { return n.id === v.char; })) {          // 캐릭터 선물
+          var oc = owned('char'); if (oc.indexOf(v.char) < 0) oc.push(v.char);
+          var sv0 = g('save'); sv0.cnChar = v.char; save2();
+          var nn = NINJAS.find(function (n) { return n.id === v.char; });
+          var pvSrc = await new Promise(function (res) { var t0 = Date.now(); (function w() { var pv = charPreview(v.char); if (typeof pv === 'string') return res(pv); if (Date.now() - t0 > 3000) return res(''); setTimeout(w, 150); })(); });
+          tellPlayer(ICON_GIFT, '관리자 선물 도착!', [(pvSrc ? '<img src="' + pvSrc + '" style="width:96px;height:96px;object-fit:contain;display:block;margin:0 auto 4px">' : '') + '<b>' + h(nn.name) + '</b>을(를) 받았어요! 지금 바로 함께해요'].concat(v.msg ? [h(v.msg)] : []));
+          try { g('SFX').buy(); } catch (_) {}
+          continue;
+        }
         if (c > 0 && c <= 1000000) { total += c; if (v.msg) note = v.msg; }
         else if (v.msg) msgs.push(String(v.msg).slice(0, 120));      // 엽전 없이 메시지만 온 것
       }
@@ -304,6 +313,7 @@
             '<button class="adm-b blue" data-give="custom">보내기</button>' +
             '<input class="adm-in" id="admMsg" maxlength="80" placeholder="메시지 (엽전과 같이 가거나, 메시지만 보낼 수 있어요)" style="flex:1 1 100%">' +
             '<button class="adm-b gray" data-give="msg" style="flex:1 1 100%">메시지만 보내기</button>' +
+            '<button class="adm-b" data-give="ninjo" style="flex:1 1 100%;background:#2b3a6b;color:#fff">닌죠 캐릭터 선물하기</button>' +
           '</div>'
         : '';
       return '<div class="adm-row' + (b ? ' banned' : '') + '" data-uid="' + r.uid + '">' +
@@ -350,6 +360,11 @@
       if (act === 'coin') { admOpen = admOpen === uid ? null : uid; admArm = null; renderAdmin(); return; }
       if (give) {
         var mtx = (document.getElementById('admMsg') || {}).value || ''; mtx = mtx.trim().slice(0, 80);
+        if (give === 'ninjo') {
+          await F.addDoc(F.collection(db, 'users', uid, 'gifts'), { coins: 0, char: 'ninjo', msg: mtx, at: Date.now(), by: x.auth.currentUser.uid });
+          admOpen = null; renderAdmin(r.nick + '에게 닌죠를 선물했어요');
+          return;
+        }
         if (give === 'msg') {
           if (!mtx) { renderAdmin('보낼 메시지를 적어주세요'); return; }
           await F.addDoc(F.collection(db, 'users', uid, 'gifts'), { coins: 0, msg: mtx, at: Date.now(), by: x.auth.currentUser.uid });
@@ -720,7 +735,7 @@
   var evalg = function (code) { try { return (0, eval)(code); } catch (_) { return undefined; } };
   function S() { return g('save') || {}; }
   function inv() { var s = S(); s.cnItems = s.cnItems || {}; return s.cnItems; }
-  function owned(kind) { var s = S(); s.cnOwn = s.cnOwn || {}; s.cnOwn[kind] = s.cnOwn[kind] || ['basic', '']; return s.cnOwn[kind]; }
+  function owned(kind) { var s = S(); s.cnOwn = s.cnOwn || {}; s.cnOwn[kind] = s.cnOwn[kind] || ['basic', '']; if (kind === 'char' && ADMIN && s.cnOwn.char.indexOf('ninjo') < 0) s.cnOwn.char.push('ninjo'); return s.cnOwn[kind]; }
   function save2() { try { g('persist')(); g('refreshLobby')(); } catch (_) {} }
   var swatch = function (c) { return c === 'rainbow' ? 'conic-gradient(#ff4a4a,#ffd84a,#4fd27a,#4aa8ff,#b48cff,#ff4a4a)' : 'rgb(' + c.join(',') + ')'; };
 
@@ -734,7 +749,8 @@
     { id: 'bolt', name: '번개 닌자', price: 600, body: [232, 176, 32], band: [60, 60, 70], belt: [140, 80, 220], em: 'bolt', d: '대시가 제일 빠를 것 같은 느낌' },
     { id: 'sakura', name: '벚꽃 닌자', price: 600, body: [232, 122, 168], band: [255, 246, 250], belt: [220, 50, 80], em: 'flower', d: '지나간 자리에 꽃잎이 날려요(기분상)' },
     { id: 'shadow', name: '그림자 닌자', price: 900, body: [80, 52, 132], band: [190, 150, 255], belt: [255, 205, 50], em: 'moon', d: '밤에만 진지해지는 닌자' },
-    { id: 'gold', name: '황금 닌자', price: 1500, body: [212, 160, 46], band: [255, 243, 176], belt: [200, 40, 50], em: 'crown', d: '엽전을 너무 많이 모아서 금이 됐어요' }
+    { id: 'gold', name: '황금 닌자', price: 1500, body: [212, 160, 46], band: [255, 243, 176], belt: [200, 40, 50], em: 'crown', d: '엽전을 너무 많이 모아서 금이 됐어요' },
+    { id: 'ninjo', name: '닌죠', price: 0, admin: true, body: [38, 50, 92], band: [246, 246, 250], belt: [176, 28, 40], em: 'swords', d: '칼 세 자루를 쓰는 검술 닌자 · 세 칼 베기 · 베기 대시 · 기합 소리' }
   ];
   var sprOrig = null, sprCache = {};
   function hslRgb(hh) { var f = function (n) { var k = (n + hh / 30) % 12; return 255 * (0.6 - 0.45 * Math.max(-1, Math.min(k - 3, 9 - k, 1))); }; return [f(0), f(8), f(4)].map(Math.round); }
@@ -748,6 +764,9 @@
     else if (kind === 'bolt') P2([[0.25, -1.2], [-0.6, 0.15], [-0.05, 0.15], [-0.3, 1.2], [0.65, -0.2], [0.1, -0.2]], '#ffe14a');
     else if (kind === 'flower') { for (var k2 = 0; k2 < 5; k2++) { var an = k2 * 2 * Math.PI / 5; x.beginPath(); x.arc(Math.cos(an) * r * 0.55, Math.sin(an) * r * 0.55, r * 0.5, 0, 7); x.fillStyle = '#ffb6d5'; x.fill(); x.stroke(); } x.beginPath(); x.arc(0, 0, r * 0.35, 0, 7); x.fillStyle = '#ffd84a'; x.fill(); x.stroke(); }
     else if (kind === 'moon') { x.beginPath(); x.arc(0, 0, r, 0, 7); x.fillStyle = '#ffe680'; x.fill(); x.stroke(); x.beginPath(); x.arc(r * 0.45, -r * 0.25, r * 0.85, 0, 7); x.fillStyle = 'rgb(190,150,255)'; x.fill(); }
+    else if (kind === 'swords') {
+      [-0.6, 0, 0.6].forEach(function (an) { x.save(); x.rotate(an); x.beginPath(); x.moveTo(0, -1.35 * r); x.lineTo(0.16 * r, -1.1 * r); x.lineTo(0.16 * r, 0.55 * r); x.lineTo(-0.16 * r, 0.55 * r); x.lineTo(-0.16 * r, -1.1 * r); x.closePath(); x.fillStyle = '#eef3f8'; x.fill(); x.lineWidth = r * 0.1; x.stroke(); x.fillStyle = '#ffd84a'; x.fillRect(-0.42 * r, 0.5 * r, 0.84 * r, 0.2 * r); x.strokeRect(-0.42 * r, 0.5 * r, 0.84 * r, 0.2 * r); x.fillStyle = '#7a2a2a'; x.fillRect(-0.13 * r, 0.7 * r, 0.26 * r, 0.55 * r); x.restore(); });
+    }
     else if (kind === 'crown') { x.translate(0, -r * 2.2); P2([[-1.3, 0.7], [-1.3, -0.5], [-0.65, 0.05], [0, -0.85], [0.65, 0.05], [1.3, -0.5], [1.3, 0.7]], '#ffd84a'); x.beginPath(); x.arc(0, 0.25 * r, r * 0.22, 0, 7); x.fillStyle = '#e8333a'; x.fill(); }
     x.restore();
   }
@@ -872,6 +891,7 @@
   function priceBtn(item, kind, eq, own) {
     if (eq) return '<button class="shp-b on" disabled>쓰는 중</button>';
     if (own) return '<button class="shp-b own" data-eq="' + kind + ':' + item.id + '">쓰기</button>';
+    if (item.admin) return '<button class="shp-b no" disabled style="font-size:12px">관리자 선물</button>';
     var no = (S().coins || 0) < item.price ? ' no' : '';
     return '<button class="shp-b' + no + '" data-buy="' + kind + ':' + item.id + '"><i class="coin sm"></i>' + item.price + '</button>';
   }
@@ -959,11 +979,13 @@
     var item = list.find(function (x) { return x.id === id; }); if (!item) return;
     var key = kind === 'char' ? 'cnChar' : kind === 'scarf' ? 'cnScarf' : kind === 'trail' ? 'cnTrail' : 'cnTitle';
     if (b.dataset.buy) {
+      if (item.admin) return openShop2('관리자 선물로만 받을 수 있어요');
       if ((s.coins || 0) < item.price) return openShop2('엽전이 모자라요');
       s.coins -= item.price; owned(kind).push(id); s[key] = id; save2();
       try { g('SFX').buy(); g('vib')(25); } catch (_) {}
       return openShop2(item.name + (kind === 'char' ? '와 함께해요!' : '을(를) 샀어요!'));
     }
+    if (b.dataset.eq && owned(kind).indexOf(id) < 0) return;
     s[key] = id; save2(); openShop2();
   });
   // 로비에 상점 버튼 (지갑을 눌러도 열려요)
@@ -977,6 +999,64 @@
     wallet.addEventListener('click', function () { try { g('SFX').click(); } catch (_) {} openShop2(); });
   }, 300);
   function titleOf(save) { var t = TITLES.find(function (x) { return x.id === (save && save.cnTitle); }); return t && t.id ? t.name : ''; }
+  // ───────── 관리자 전용 캐릭터: 닌죠 (칼 세 자루 검술 닌자) ─────────
+  // 상점에서는 못 사고, 관리자 선물로만 받아요. 세 칼 베기 · 베기 대시 · 기합 소리
+  function isNinjo() { return (S().cnChar || '') === 'ninjo' && owned('char').indexOf('ninjo') >= 0; }
+  var lastVoice = 0;
+  // 굵고 거친 남자 기합 목소리: 기기 읽어주기를 최대한 낮게 + 낮은 으르렁 소리를 겹쳐요
+  function shout(text, force) {
+    var s = S(); if (s.sfx === false) return;
+    var now = Date.now(); if (!force && now - lastVoice < 650) return;
+    lastVoice = now;
+    try { g('tone')(88, 0.32, 'sawtooth', 0.05, -28); g('noise')(0.22, 0.07, 520); } catch (_) {}
+    if (!window.speechSynthesis) return;
+    try {
+      speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text); u.lang = 'ko-KR'; u.rate = 1.05; u.pitch = 0.1; u.volume = 1;
+      var vs = speechSynthesis.getVoices().filter(function (v) { return /ko/i.test(v.lang); });
+      if (vs.length) u.voice = vs.find(function (v) { return /injoon|hyunsu|minsu|male|남/i.test(v.name) && !/female|여/i.test(v.name); }) || vs[0];
+      speechSynthesis.speak(u);
+    } catch (_) {}
+  }
+  var LINES = { s1: ['흡!', '하앗!', '핫!'], s2: ['어림없다!', '느려!'], s3: ['세 칼 베기!', '칼 세 자루, 각오해라!'], dash: ['베어주마!', '비켜라!', '길은 내가 낸다!'] };
+  var pickL = function (k) { var a = LINES[k]; return a[Math.floor(Math.random() * a.length)]; };
+  if (window.speechSynthesis) { try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = function () {}; } catch (_) {} }
+  var hookNinjo = setInterval(function () {
+    var SF = g('SFX'); if (!SF || !SF.slash || !SF.dash || SF.__ninjo) return;
+    clearInterval(hookNinjo); SF.__ninjo = true;
+    var oSlash = SF.slash, oDash = SF.dash;
+    SF.slash = function (k) {
+      var r = oSlash.apply(this, arguments);
+      if (!isNinjo()) return r;
+      if (k === 3) {
+        shout(pickL('s3'), true);
+        evalg('(function () { var p = P; if (!p) return; var cx = p.x + p.w / 2, cy = p.y + p.h / 2 - 4;' +
+          'ring(cx, cy, "rgba(255,255,255,.95)", 78, 0.32); ring(cx, cy, "rgba(255,216,74,.85)", 58, 0.26);' +
+          'for (var a = 0; a < 3; a++) { var an = a * 2.094 + time * 3; particles.push({ k: "cut", x: cx + Math.cos(an) * 34, y: cy + Math.sin(an) * 22, vx: 0, vy: 0, life: 0.22, max: 0.22, ang: an + 1.57, size: 110 }); }' +
+          'for (var i = 0; i < 16; i++) { var b = i / 16 * TAU; particles.push({ k: "streak", x: cx, y: cy, vx: Math.cos(b) * 320, vy: Math.sin(b) * 220, life: 0.24, max: 0.24, size: 1.8, col: i % 2 ? "#ffffff" : "#ffe27a" }); }' +
+          'for (var e of enemies) if (!e.dead && Math.hypot(e.x + e.w / 2 - cx, e.y + e.h / 2 - cy) < 86) { e.dead = 0.001; tut.kills++; onKill(p, e.x + e.w / 2, e.y, e, "slash"); slashImpact(e, p, true); floatText(e.x + e.w / 2, e.y - 8, "세 칼 베기!", "#ffe14a", 16); }' +
+          'if (boss && boss.active && !boss.dead && boss.lastSlash !== p.slashId && Math.hypot(boss.x + boss.w / 2 - cx, boss.y + boss.h / 2 - cy) < 110) { boss.lastSlash = p.slashId; bossHit(2, p); }' +
+          'kick(8, 0.06, 0.08); })()');
+      } else shout(pickL(k === 2 ? 's2' : 's1'));
+      return r;
+    };
+    SF.dash = function () {
+      var r = oDash.apply(this, arguments);
+      if (isNinjo()) shout(pickL('dash'), true);
+      return r;
+    };
+  }, 300);
+  // 베기 대시: 대시하는 동안 앞쪽으로 넓게 칼바람이 나가요
+  (function dashLoop() {
+    requestAnimationFrame(dashLoop);
+    if (g('mode') !== 'play' || !isNinjo()) return;
+    evalg('(function () { var p = P; if (!p || p.dead || !(p.dashT > 0)) return;' +
+      'var hb = { x: p.dashDir > 0 ? p.x : p.x - 44, y: p.y - 16, w: p.w + 44, h: p.h + 28 };' +
+      'if (Math.random() < 0.7) particles.push({ k: "streak", x: p.x + p.w / 2 - p.dashDir * 10, y: p.y + 6 + Math.random() * (p.h - 8), vx: -p.dashDir * (180 + Math.random() * 120), vy: (Math.random() - 0.5) * 40, life: 0.2, max: 0.2, size: 1.6, col: "#dff6ff" });' +
+      'for (var e of enemies) if (!e.dead && overlap(hb, e)) { e.dead = 0.001; tut.kills++; onKill(p, e.x + e.w / 2, e.y, e, "dash"); p.slashKind = 1; slashImpact(e, p, false); floatText(e.x + e.w / 2, e.y - 8, "칼바람!", "#c7f0ff", 15); SFX.hit(); kick(4, 0.03, 0.06); }' +
+      '})()');
+  })();
+
   var realFetch = window.fetch.bind(window);
   window.fetch = function (input, init) {
     var href = typeof input === 'string' ? input : (input && input.url) || '';
