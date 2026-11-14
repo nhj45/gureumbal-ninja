@@ -730,8 +730,8 @@
   css4.textContent = [
     '#btnShop{display:flex;align-items:center;justify-content:center;padding:0;background:#ffd84a!important;margin-left:8px}',
     '#btnShop svg{width:26px;height:26px}',
-    '.shp-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}',
-    '.shp-tabs button{flex:1 1 30%;font:inherit;font-size:14px;padding:8px 4px;border:3px solid #141418;border-radius:12px;background:#f3ead8;color:#2b2b3a}',
+    '.shp-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}',
+    '.shp-tabs button{min-width:0;white-space:nowrap;font:inherit;font-size:14px;padding:8px 4px;border:3px solid #141418;border-radius:12px;background:#f3ead8;color:#2b2b3a}',
     '.shp-pv{width:54px;height:54px;object-fit:contain;flex:none;background:#fffaf0;border:3px solid #141418;border-radius:12px}',
     '.shp-tabs button.on{background:#2b3a6b;color:#fff}',
     '.shp-list{display:flex;flex-direction:column;gap:8px}',
