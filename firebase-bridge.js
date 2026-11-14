@@ -220,21 +220,23 @@
         return;
       }
       var gs = await x.F.getDocs(x.F.collection(x.db, 'users', u.uid, 'gifts'));
-      var total = 0, note = '';
+      var total = 0, note = '', msgs = [];
       for (var i = 0; i < gs.docs.length; i++) {
         var d = gs.docs[i], v = d.data();
         await x.F.deleteDoc(d.ref);
         var c = Math.floor(Number(v.coins) || 0);
-        if (c > 0 && c <= 1000000) total += c;
-        if (v.msg) note = v.msg;
+        if (c > 0 && c <= 1000000) { total += c; if (v.msg) note = v.msg; }
+        else if (v.msg) msgs.push(String(v.msg).slice(0, 120));      // 엽전 없이 메시지만 온 것
       }
+      msgs.forEach(function (m) { tellPlayer(ICON_HORN, '관리자 메시지', [h(m)]); });
+      if (msgs.length) { try { g('SFX').buy(); } catch (_) {} }
       if (total > 0) {
         var sv = g('save');
         sv.coins = (sv.coins || 0) + total;
         try { g('persist')(); } catch (_) {}
         try { g('refreshLobby')(); } catch (_) {}
         try { g('SFX').buy(); } catch (_) {}
-        popup(ICON_GIFT, '관리자 선물 도착!', ['<b>엽전 +' + total + '</b>'].concat(note ? [h(note)] : []));
+        tellPlayer(ICON_GIFT, '관리자 선물 도착!', ['<b>엽전 +' + total + '</b>'].concat(note ? [h(note)] : []));
       }
     } catch (_) { }
     polling = false;
@@ -285,6 +287,8 @@
             '<button class="adm-b" data-give="100">+100</button><button class="adm-b" data-give="500">+500</button><button class="adm-b" data-give="1000">+1000</button>' +
             '<input class="adm-in" id="admAmt" type="number" inputmode="numeric" placeholder="직접 입력" style="flex:1 1 90px">' +
             '<button class="adm-b blue" data-give="custom">보내기</button>' +
+            '<input class="adm-in" id="admMsg" maxlength="80" placeholder="메시지 (엽전과 같이 가거나, 메시지만 보낼 수 있어요)" style="flex:1 1 100%">' +
+            '<button class="adm-b gray" data-give="msg" style="flex:1 1 100%">메시지만 보내기</button>' +
           '</div>'
         : '';
       return '<div class="adm-row' + (b ? ' banned' : '') + '" data-uid="' + r.uid + '">' +
@@ -330,9 +334,16 @@
       var act = t.dataset.act, give = t.dataset.give;
       if (act === 'coin') { admOpen = admOpen === uid ? null : uid; admArm = null; renderAdmin(); return; }
       if (give) {
+        var mtx = (document.getElementById('admMsg') || {}).value || ''; mtx = mtx.trim().slice(0, 80);
+        if (give === 'msg') {
+          if (!mtx) { renderAdmin('보낼 메시지를 적어주세요'); return; }
+          await F.addDoc(F.collection(db, 'users', uid, 'gifts'), { coins: 0, msg: mtx, at: Date.now(), by: x.auth.currentUser.uid });
+          admOpen = null; renderAdmin(r.nick + '에게 메시지를 보냈어요');
+          return;
+        }
         var n = give === 'custom' ? Math.floor(Number(document.getElementById('admAmt').value)) : Number(give);
         if (!(n > 0 && n <= 1000000)) { renderAdmin('1 ~ 1000000 사이로 적어주세요'); return; }
-        await F.addDoc(F.collection(db, 'users', uid, 'gifts'), { coins: n, msg: '', at: Date.now(), by: x.auth.currentUser.uid });
+        await F.addDoc(F.collection(db, 'users', uid, 'gifts'), { coins: n, msg: mtx, at: Date.now(), by: x.auth.currentUser.uid });
         try { g('SFX').buy(); } catch (_) {}
         admOpen = null; renderAdmin(r.nick + '에게 코인 ' + n + '개를 보냈어요');
         return;
@@ -383,7 +394,20 @@
   var ICON_HORN = '<svg viewBox="0 0 64 64" width="64" height="64"><path d="M10 26h10l26-14v40L20 38H10z" fill="#8fd3ff" stroke="#141418" stroke-width="3.5" stroke-linejoin="round"/><path d="M20 38l4 14h8l-3-12" fill="#5b6cff" stroke="#141418" stroke-width="3.5" stroke-linejoin="round"/><path d="M52 24c4 4 4 12 0 16" fill="none" stroke="#141418" stroke-width="3.5" stroke-linecap="round"/></svg>';
   var ICON_STAR = '<svg viewBox="0 0 64 64" width="64" height="64"><path d="m32 6 7.6 16 17.4 2.3-12.8 12 3.3 17.2L32 45l-15.5 8.5 3.3-17.2L7 24.3 24.4 22z" fill="#ffd84a" stroke="#141418" stroke-width="3.5" stroke-linejoin="round"/></svg>';
 
-  var popQ = [];
+  var popQ = [], laterQ = [];
+  // 플레이 중이면 띠만 보이고, 큰 창은 판이 끝나면(로비·결과 화면) 바로 띄워요
+  function tellPlayer(icon, title, lines) {
+    if (g('mode') === 'play') { laterQ.push([icon, title, lines]); miniBand(title + ' ' + lines.join(' ').replace(/<[^>]+>/g, '')); }
+    else popup(icon, title, lines);
+  }
+  setInterval(function () {
+    if (laterQ.length && g('mode') !== 'play') { var q = laterQ; laterQ = []; q.forEach(function (n) { popup(n[0], n[1], n[2]); }); }
+  }, 700);
+  function miniBand(text) {                                  // 띠가 이미 흐르고 있으면 뒤에 이어 붙여요
+    var sp = document.querySelector('#cnBand span');
+    if (sp) { if (sp.textContent.indexOf(text) < 0) sp.insertAdjacentText('beforeend', '   ·   ' + text); return; }
+    try { showBand(text); } catch (_) {}
+  }
   function popup(icon, title, lines) {                      // 여러 개가 한꺼번에 오면 차례대로 보여줘요
     if (document.getElementById('cnPop')) { popQ.push([icon, title, lines]); return; }
     var d = document.createElement('div'); d.id = 'cnPop';
@@ -468,7 +492,7 @@
     var bc = LIVE.bcast;
     if (bc && bc.text && (!bc.until || bc.until > Date.now()) && !seen('bc', bc.id)) {
       showBand(bc.text);
-      if (g('mode') !== 'play') popup(ICON_HORN, '관리자 메시지', [h(bc.text)]);
+      tellPlayer(ICON_HORN, '관리자 메시지', [h(bc.text)]);
     }
     var ev = evActive();
     if (ev && evText(ev) && !seen('ev', ev.id)) popup(ICON_STAR, '이벤트 시작!', [(ev.msg ? h(ev.msg) + '<br>' : '') + '<b>' + evText(ev) + '</b>', ev.until ? fmtLeft(ev.until - Date.now()) : '끝날 때까지 계속돼요']);
