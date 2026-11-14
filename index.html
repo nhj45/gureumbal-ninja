@@ -13,7 +13,7 @@
 fetch('gureumbal-ninja.html', { cache: 'no-cache' })
   .then(function (r) { if (!r.ok) throw 0; return r.text(); })
   .then(function (html) {
-    var tag = '<script src="firebase-bridge.js?v=9"><\/script>';
+    var tag = '<script src="firebase-bridge.js?v=10"><\/script>';
     html = /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, function (m) { return m + tag; }) : tag + html;
     document.open(); document.write(html); document.close();
   })
