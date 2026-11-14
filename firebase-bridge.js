@@ -1143,3 +1143,45 @@
   }
   var waitPc = setInterval(function () { if (document.body && document.getElementById('ctrl')) { clearInterval(waitPc); init(); } }, 200);
 })();
+
+// ── 배경음악 끊김 없이 반복 (앞뒤 무음 잘라내고 Web Audio로 반복) ──
+(function () {
+  var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+  var ctx = null, buf = null, src = null, gain = null, el = null, loading = false, a0 = 0, a1 = 0;
+  function findEdges(b) {
+    var th = 0.004, n = b.length, ch = [], c;
+    for (c = 0; c < b.numberOfChannels; c++) ch.push(b.getChannelData(c));
+    var loud = function (i) { for (var k = 0; k < ch.length; k++) if (Math.abs(ch[k][i]) > th) return true; return false; };
+    var s = 0; while (s < n && !loud(s)) s++;
+    var e = n - 1; while (e > s && !loud(e)) e--;
+    a0 = s / b.sampleRate; a1 = (e + 1) / b.sampleRate;
+  }
+  function load() {
+    if (loading || !el) return; loading = true;
+    fetch(el.currentSrc || el.src).then(function (r) { return r.arrayBuffer(); })
+      .then(function (ab) { return new Promise(function (ok, no) { ctx.decodeAudioData(ab, ok, no); }); })
+      .then(function (b) { buf = b; findEdges(b); })
+      .catch(function () { loading = 'fail'; });
+  }
+  function start() {
+    if (src || !buf) return;
+    src = ctx.createBufferSource(); src.buffer = buf; src.loop = true; src.loopStart = a0; src.loopEnd = a1;
+    src.connect(gain);
+    var off = Math.min(Math.max(a0, (el.currentTime || 0)), a1 - 0.05);
+    src.start(0, off);
+    el.muted = true;
+  }
+  function stop() { if (src) { try { src.stop(); } catch (_) {} src.disconnect(); src = null; } }
+  function unlock() { if (ctx && ctx.state === 'suspended') ctx.resume().catch(function () {}); }
+  ['pointerdown', 'keydown', 'touchend'].forEach(function (ev) { addEventListener(ev, unlock, { capture: true, passive: true }); });
+  setInterval(function () {
+    if (!el) { try { el = (0, eval)('bgm'); } catch (_) {} if (!el) return; }
+    if (!ctx) { try { ctx = new AC(); gain = ctx.createGain(); gain.connect(ctx.destination); } catch (_) { return; } }
+    if (loading === 'fail') { el.muted = false; return; }
+    if (!buf) { load(); return; }
+    gain.gain.value = el.volume;
+    var on = !el.paused && !document.hidden;
+    if (on) { unlock(); if (ctx.state === 'running') start(); else el.muted = false; }
+    else stop();
+  }, 250);
+})();
