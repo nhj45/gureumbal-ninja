@@ -1009,6 +1009,7 @@
     var now = Date.now(); if (!force && now - lastVoice < 650) return;
     lastVoice = now;
     try { g('tone')(88, 0.32, 'sawtooth', 0.05, -28); g('noise')(0.22, 0.07, 520); } catch (_) {}
+    return; // voice removed
     if (!window.speechSynthesis) return;
     try {
       speechSynthesis.cancel();
