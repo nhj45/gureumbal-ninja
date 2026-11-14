@@ -567,6 +567,35 @@
     }
   }, 200);
 
+
+  // ───────── 비밀번호 보이기 버튼 (눈 모양) ─────────
+  var EYE_ON = '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="#fff" stroke="#141418" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.6" fill="#141418"/><circle cx="13.2" cy="10.8" r="1.1" fill="#fff"/></svg>';
+  var EYE_OFF = '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="#e9e1cf" stroke="#141418" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.6" fill="#8a7f68"/><path d="M4 4l16 16" stroke="#141418" stroke-width="2.6" stroke-linecap="round"/></svg>';
+  var css3 = document.createElement('style');
+  css3.textContent = '.pwWrap{position:relative;width:100%}.pwWrap .lin{padding-right:50px}' +
+    '.pwEye{position:absolute;right:8px;top:calc(50% - 4px);transform:translateY(-50%);width:38px;height:38px;border:none;background:none;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer}' +
+    '.pwEye:active{transform:translateY(-50%) scale(.9)}';
+  (document.head || document.documentElement).appendChild(css3);
+  function addEye(id) {
+    var inp = document.getElementById(id);
+    if (!inp || inp.parentNode.classList.contains('pwWrap')) return;
+    var wrap = document.createElement('div'); wrap.className = 'pwWrap';
+    inp.parentNode.insertBefore(wrap, inp); wrap.appendChild(inp);
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'pwEye'; b.setAttribute('aria-label', '비밀번호 보이기'); b.innerHTML = EYE_OFF;
+    b.addEventListener('pointerdown', function (e) { e.preventDefault(); });          // 키보드가 닫히지 않게
+    b.addEventListener('click', function (e) {
+      e.preventDefault(); e.stopPropagation();
+      var show = inp.type === 'password';
+      inp.type = show ? 'text' : 'password';
+      b.innerHTML = show ? EYE_ON : EYE_OFF;
+      b.setAttribute('aria-label', show ? '비밀번호 숨기기' : '비밀번호 보이기');
+      try { g('SFX').click(); } catch (_) {}
+    });
+    wrap.appendChild(b);
+    var sync = function () { wrap.style.display = inp.classList.contains('hide') ? 'none' : ''; };
+    sync(); new MutationObserver(sync).observe(inp, { attributes: true, attributeFilter: ['class'] });
+  }
+  var waitPw = setInterval(function () { if (document.getElementById('lPw')) { clearInterval(waitPw); addEye('lPw'); addEye('lPw2'); } }, 200);
   var realFetch = window.fetch.bind(window);
   window.fetch = function (input, init) {
     var href = typeof input === 'string' ? input : (input && input.url) || '';
