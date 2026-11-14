@@ -196,10 +196,31 @@ async function isAdmin(u) {
   try { return (await F.getDoc(F.doc(db, 'admins', u.uid))).exists(); } catch (_) { return false; }
 }
 
+const KO2EN = (function () {
+  var CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ', JUNG = 'ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ', JONG = ' ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ';
+  var K = { 'ㄱ': 'r', 'ㄲ': 'R', 'ㄴ': 's', 'ㄷ': 'e', 'ㄸ': 'E', 'ㄹ': 'f', 'ㅁ': 'a', 'ㅂ': 'q', 'ㅃ': 'Q', 'ㅅ': 't', 'ㅆ': 'T', 'ㅇ': 'd', 'ㅈ': 'w', 'ㅉ': 'W', 'ㅊ': 'c', 'ㅋ': 'z', 'ㅌ': 'x', 'ㅍ': 'v', 'ㅎ': 'g',
+    'ㅏ': 'k', 'ㅐ': 'o', 'ㅑ': 'i', 'ㅒ': 'O', 'ㅓ': 'j', 'ㅔ': 'p', 'ㅕ': 'u', 'ㅖ': 'P', 'ㅗ': 'h', 'ㅘ': 'hk', 'ㅙ': 'ho', 'ㅚ': 'hl', 'ㅛ': 'y', 'ㅜ': 'n', 'ㅝ': 'nj', 'ㅞ': 'np', 'ㅟ': 'nl', 'ㅠ': 'b', 'ㅡ': 'm', 'ㅢ': 'ml', 'ㅣ': 'l',
+    'ㄳ': 'rt', 'ㄵ': 'sw', 'ㄶ': 'sg', 'ㄺ': 'fr', 'ㄻ': 'fa', 'ㄼ': 'fq', 'ㄽ': 'ft', 'ㄾ': 'fx', 'ㄿ': 'fv', 'ㅀ': 'fg', 'ㅄ': 'qt' };
+  return function (str) {
+    var out = '';
+    for (var i = 0; i < str.length; i++) {
+      var ch = str[i], c = ch.charCodeAt(0);
+      if (c >= 0xAC00 && c <= 0xD7A3) {
+        var n = c - 0xAC00, jo = JONG[n % 28];
+        out += K[CHO[Math.floor(n / 588)]] + K[JUNG[Math.floor((n % 588) / 28)]] + (jo === ' ' ? '' : K[jo]);
+      } else out += K[ch] || ch;
+    }
+    return out.toLowerCase();
+  };
+})();
+$('lid').setAttribute('inputmode', 'email'); $('lid').setAttribute('autocapitalize', 'off');
+$('lid').addEventListener('input', e => { if (!e.isComposing) { const v = KO2EN($('lid').value); if (v !== $('lid').value) $('lid').value = v; } });
+$('lid').addEventListener('compositionend', () => setTimeout(() => { $('lid').value = KO2EN($('lid').value); }, 0));
+
 // ───── 로그인 ─────
 $('loginBox').addEventListener('submit', async e => {
   e.preventDefault(); $('lerr').textContent = '';
-  const id = $('lid').value.trim().toLowerCase(), pw = $('lpw').value;
+  const id = KO2EN($('lid').value.trim()), pw = $('lpw').value;
   try {
     await A.signInWithEmailAndPassword(auth, id + DOMAIN, pw + '#cloud');
   } catch (err) { $('lerr').textContent = '아이디나 비밀번호가 틀렸어요'; return; }
