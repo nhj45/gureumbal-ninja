@@ -61,9 +61,18 @@
   async function me(x) {
     var u = x.auth.currentUser;
     if (!u) return out(401, { error: '다시 로그인해 주세요' });
+    var ban = await x.F.getDoc(x.F.doc(x.db, 'bans', u.uid));
+    if (ban.exists()) {
+      await x.A.signOut(x.auth);
+      var why = (ban.data() && ban.data().reason) || '';
+      var msg = '이 계정은 관리자에 의해 정지됐어요' + (why ? ' (' + why + ')' : '');
+      setTimeout(function () { try { setToken(null); document.getElementById('lErr').textContent = msg; } catch (_) {} }, 50);
+      return out(403, { error: msg });
+    }
     var snap = await x.F.getDoc(x.F.doc(x.db, 'users', u.uid));
     var d = snap.exists() ? snap.data() : {};
     var save = null; try { save = d.save ? JSON.parse(d.save) : null; } catch (_) {}
+    afterLogin(x);
     return out(200, { token: u.uid, id: d.id || (u.email || '').split('@')[0], nick: d.nick || '닌자', save: save });
   }
 
@@ -95,6 +104,7 @@
         var uid = cred.user.uid;
         await F.setDoc(F.doc(db, 'users', uid), { id: id, nick: nick, save: null, updated: Date.now() });
         await F.setDoc(F.doc(db, 'ranks', uid), { nick: nick });
+        afterLogin(x);
         return out(200, { token: uid, id: id, nick: nick, save: null });
       } catch (e) { return authError(e); }
     }
@@ -134,7 +144,7 @@
       return out(200, { ok: true, at: now });
     }
 
-    if (route === 'POST /api/logout') { await A.signOut(auth); return out(200, { ok: true }); }
+    if (route === 'POST /api/logout') { ADMIN = false; updateAdminBtn(); await A.signOut(auth); return out(200, { ok: true }); }
 
     if (route === 'POST /api/nick') {
       var n2 = cleanNick(body.nick);
@@ -146,6 +156,194 @@
 
     return out(404, { error: '없는 주소예요' });
   }
+
+
+  // ───────── 관리자 · 선물 · 정지 ─────────
+  var ADMIN = false;
+  var SHIELD = '<svg class="ic" viewBox="0 0 24 24" width="24" height="24"><path d="M12 2.5 4 5.6v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10v-6z" fill="#5b6cff" stroke="#141418" stroke-width="2" stroke-linejoin="round"/><path d="m12 7.2 1.5 3 3.3.5-2.4 2.3.6 3.3-3-1.6-3 1.6.6-3.3-2.4-2.3 3.3-.5z" fill="#ffd84a" stroke="#141418" stroke-width="1.3" stroke-linejoin="round"/></svg>';
+  var css = document.createElement('style');
+  css.textContent = [
+    '#btnAdmin{display:flex;align-items:center;justify-content:center;padding:0;background:#fff3c4!important;margin-left:auto;margin-right:8px}',
+    '#btnAdmin svg{width:26px;height:26px}',
+    '.adm-bar{display:flex;gap:6px;margin-bottom:10px}',
+    '.adm-in{flex:1;min-width:0;font:inherit;font-size:15px;padding:9px 12px;border:3px solid #141418;border-radius:12px;background:#fff;color:#2b2b3a}',
+    '.adm-b{font:inherit;font-size:14px;padding:8px 11px;border:3px solid #141418!important;border-radius:12px;background:#ffd84a;color:#2b2b3a;white-space:nowrap}',
+    '.adm-b.blue{background:#8fd3ff}.adm-b.red{background:#ff8a7a}.adm-b.gray{background:#e6dcc6}.adm-b:active{transform:translateY(2px)}',
+    '.adm-row{background:#f3ead8;border:3px solid #141418;border-radius:14px;padding:10px 12px;color:#2b2b3a}',
+    '.adm-row.banned{background:#ffd9d2}',
+    '.adm-top{display:flex;align-items:center;gap:8px}',
+    '.adm-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:16px}',
+    '.adm-name small{color:#8a7f68;font-size:12px;margin-left:4px}',
+    '.adm-info{font-size:12.5px;color:#6d6452;margin-top:3px}',
+    '.adm-tag{font-size:12px;background:#ff5a4a;color:#fff;border-radius:8px;padding:2px 7px;margin-left:6px}',
+    '.adm-more{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}',
+    '.adm-list{display:flex;flex-direction:column;gap:8px}'
+  ].join('\n');
+  (document.head || document.documentElement).appendChild(css);
+
+  function g(name) { try { return (0, eval)(name); } catch (_) { return undefined; } }   // 게임 쪽 값/함수 가져오기
+  var h = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+
+  var pollTimer = null;
+  function afterLogin(x) {
+    var u = x.auth.currentUser; if (!u) return;
+    x.F.getDoc(x.F.doc(x.db, 'admins', u.uid)).then(function (d) { ADMIN = d.exists(); updateAdminBtn(); }).catch(function () { ADMIN = false; updateAdminBtn(); });
+    clearInterval(pollTimer);
+    pollTimer = setInterval(function () { poll(x); }, 20000);
+    setTimeout(function () { poll(x); }, 2500);
+  }
+
+  var polling = false;
+  async function poll(x) {
+    var u = x.auth.currentUser;
+    if (!u) { clearInterval(pollTimer); return; }
+    if (g('PROFILE') !== '@server' || polling) return;
+    polling = true;
+    try {
+      var ban = await x.F.getDoc(x.F.doc(x.db, 'bans', u.uid));
+      if (ban.exists()) {
+        clearInterval(pollTimer);
+        var why = (ban.data() && ban.data().reason) || '';
+        var msg = '이 계정은 관리자에 의해 정지됐어요' + (why ? ' (' + why + ')' : '');
+        try { await g('logout')(); } catch (_) {}
+        try { document.getElementById('lErr').textContent = msg; } catch (_) {}
+        return;
+      }
+      var gs = await x.F.getDocs(x.F.collection(x.db, 'users', u.uid, 'gifts'));
+      var total = 0, note = '';
+      for (var i = 0; i < gs.docs.length; i++) {
+        var d = gs.docs[i], v = d.data();
+        await x.F.deleteDoc(d.ref);
+        var c = Math.floor(Number(v.coins) || 0);
+        if (c > 0 && c <= 1000000) total += c;
+        if (v.msg) note = v.msg;
+      }
+      if (total > 0) {
+        var sv = g('save');
+        sv.coins = (sv.coins || 0) + total;
+        try { g('persist')(); } catch (_) {}
+        try { g('refreshLobby')(); } catch (_) {}
+        try { g('SFX').buy(); } catch (_) {}
+        try { g('showLobbyMsg')('관리자 선물 도착! 코인 +' + total + (note ? ' · ' + note : '')); } catch (_) {}
+      }
+    } catch (_) { }
+    polling = false;
+  }
+
+  function updateAdminBtn() {
+    var bar = document.querySelector('#lobby .topbar');
+    if (!bar) return;
+    var b = document.getElementById('btnAdmin');
+    if (ADMIN && !b) {
+      b = document.createElement('button');
+      b.className = 'icon'; b.id = 'btnAdmin'; b.title = '관리자'; b.innerHTML = SHIELD;
+      b.addEventListener('click', function () { try { g('SFX').click(); } catch (_) {} openAdmin(); });
+      bar.insertBefore(b, document.getElementById('btnSet'));
+    } else if (!ADMIN && b) b.remove();
+  }
+  var waitBar = setInterval(function () { if (document.querySelector('#lobby .topbar')) { clearInterval(waitBar); updateAdminBtn(); } }, 300);
+
+  var admRows = [], admBans = {}, admOpen = null, admArm = null;
+  async function loadAdmin(x, search) {
+    var F = x.F, db = x.db;
+    var bans = await F.getDocs(F.collection(db, 'bans'));
+    admBans = {}; bans.docs.forEach(function (d) { admBans[d.id] = d.data() || {}; });
+    var q = search
+      ? F.query(F.collection(db, 'users'), F.where('id', '==', search.toLowerCase()))
+      : F.query(F.collection(db, 'users'), F.orderBy('updated', 'desc'), F.limit(100));
+    var snap = await F.getDocs(q);
+    admRows = snap.docs.map(function (d) {
+      var v = d.data(), sv = {}; try { sv = v.save ? JSON.parse(v.save) : {}; } catch (_) {}
+      return { uid: d.id, id: v.id || '?', nick: v.nick || '닌자', coins: sv.coins || 0, tower: (sv.stats && sv.stats.tower) || 0, updated: v.updated || 0 };
+    });
+  }
+  function ago(t) {
+    if (!t) return '-';
+    var m = Math.floor((Date.now() - t) / 60000);
+    if (m < 1) return '방금'; if (m < 60) return m + '분 전';
+    var hh = Math.floor(m / 60); if (hh < 24) return hh + '시간 전';
+    return Math.floor(hh / 24) + '일 전';
+  }
+  function renderAdmin(note) {
+    var body = document.getElementById('sheetBody'); if (!body) return;
+    var sv = document.getElementById('admQ') ? document.getElementById('admQ').value : '';
+    var rows = admRows.map(function (r) {
+      var b = admBans[r.uid];
+      var more = admOpen === r.uid
+        ? '<div class="adm-more">' +
+            '<button class="adm-b" data-give="100">+100</button><button class="adm-b" data-give="500">+500</button><button class="adm-b" data-give="1000">+1000</button>' +
+            '<input class="adm-in" id="admAmt" type="number" inputmode="numeric" placeholder="직접 입력" style="flex:1 1 90px">' +
+            '<button class="adm-b blue" data-give="custom">보내기</button>' +
+          '</div>'
+        : '';
+      return '<div class="adm-row' + (b ? ' banned' : '') + '" data-uid="' + r.uid + '">' +
+        '<div class="adm-top"><div class="adm-name">' + h(r.nick) + '<small>@' + h(r.id) + '</small>' + (b ? '<span class="adm-tag">정지됨</span>' : '') + '</div>' +
+        '<button class="adm-b" data-act="coin">코인 주기</button>' +
+        (b ? '<button class="adm-b gray" data-act="unban">정지 풀기</button>'
+           : '<button class="adm-b red" data-act="ban">' + (admArm === r.uid ? '정말 정지?' : '정지') + '</button>') +
+        '</div>' +
+        '<div class="adm-info">코인 ' + r.coins + ' · 탑 ' + r.tower + 'm · 마지막 저장 ' + ago(r.updated) + (b && b.reason ? ' · 사유: ' + h(b.reason) : '') + '</div>' +
+        more + '</div>';
+    }).join('');
+    body.innerHTML =
+      '<div class="adm-bar"><input class="adm-in" id="admQ" placeholder="아이디로 찾기 (비우면 최근 100명)" value="' + h(sv) + '"><button class="adm-b blue" id="admGo">찾기</button></div>' +
+      (note ? '<div class="note" style="margin:0 0 10px;color:#2f7fd6">' + h(note) + '</div>' : '') +
+      '<div class="adm-list">' + (rows || '<div class="note">플레이어가 없어요</div>') + '</div>' +
+      '<div class="note">코인은 그 플레이어가 게임에 접속해 있으면 20초 안에, 아니면 다음 접속 때 들어가요.<br>정지하면 바로 튕기고 랭킹에서도 빠져요.</div>';
+    body.querySelectorAll('input').forEach(function (i) {
+      i.addEventListener('keydown', function (e) { e.stopPropagation(); if (e.key === 'Enter' && i.id === 'admQ') document.getElementById('admGo').click(); });
+      i.addEventListener('keyup', function (e) { e.stopPropagation(); });
+    });
+  }
+  async function openAdmin() {
+    var open = g('openSheet'); if (!open) return;
+    open(SHIELD + '관리자', '<div class="note">불러오는 중…</div>');
+    admOpen = null; admArm = null;
+    try { var x = await fb(); await loadAdmin(x, ''); renderAdmin(); }
+    catch (e) { document.getElementById('sheetBody').innerHTML = '<div class="note">관리자 정보를 불러오지 못했어요</div>'; }
+  }
+  document.addEventListener('click', async function (e) {
+    var body = document.getElementById('sheetBody');
+    if (!ADMIN || !body || !body.contains(e.target) || !document.querySelector('.adm-list')) return;
+    var t = e.target.closest('button'); if (!t) return;
+    var x = await fb(); var F = x.F, db = x.db;
+    var row = t.closest('.adm-row'), uid = row && row.dataset.uid;
+    var r = admRows.find(function (z) { return z.uid === uid; });
+    try {
+      if (t.id === 'admGo') {
+        await loadAdmin(x, document.getElementById('admQ').value.trim()); admOpen = null; admArm = null; renderAdmin();
+        return;
+      }
+      if (!r) return;
+      var act = t.dataset.act, give = t.dataset.give;
+      if (act === 'coin') { admOpen = admOpen === uid ? null : uid; admArm = null; renderAdmin(); return; }
+      if (give) {
+        var n = give === 'custom' ? Math.floor(Number(document.getElementById('admAmt').value)) : Number(give);
+        if (!(n > 0 && n <= 1000000)) { renderAdmin('1 ~ 1000000 사이로 적어주세요'); return; }
+        await F.addDoc(F.collection(db, 'users', uid, 'gifts'), { coins: n, msg: '', at: Date.now(), by: x.auth.currentUser.uid });
+        try { g('SFX').buy(); } catch (_) {}
+        admOpen = null; renderAdmin(r.nick + '에게 코인 ' + n + '개를 보냈어요');
+        return;
+      }
+      if (act === 'ban') {
+        if (uid === x.auth.currentUser.uid) { renderAdmin('자기 자신은 정지할 수 없어요'); return; }
+        if (admArm !== uid) { admArm = uid; renderAdmin(); return; }
+        admArm = null;
+        await F.setDoc(F.doc(db, 'bans', uid), { reason: '', at: Date.now(), by: x.auth.currentUser.uid });
+        try { await F.deleteDoc(F.doc(db, 'ranks', uid)); } catch (_) {}
+        admBans[uid] = { at: Date.now() };
+        try { g('SFX').nope(); } catch (_) {}
+        renderAdmin(r.nick + ' 계정을 정지했어요');
+        return;
+      }
+      if (act === 'unban') {
+        await F.deleteDoc(F.doc(db, 'bans', uid));
+        delete admBans[uid];
+        renderAdmin(r.nick + ' 계정의 정지를 풀었어요 (랭킹은 다음 저장 때 돌아와요)');
+        return;
+      }
+    } catch (err) { renderAdmin('실패했어요: ' + ((err && err.code) || '권한이 없어요')); }
+  });
 
   var realFetch = window.fetch.bind(window);
   window.fetch = function (input, init) {
