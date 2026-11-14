@@ -187,7 +187,7 @@
   var pollTimer = null;
   function afterLogin(x) {
     var u = x.auth.currentUser; if (!u) return;
-    x.F.getDoc(x.F.doc(x.db, 'admins', u.uid)).then(function (d) { ADMIN = d.exists(); updateAdminBtn(); }).catch(function () { ADMIN = false; updateAdminBtn(); });
+    x.F.getDoc(x.F.doc(x.db, 'admins', u.uid)).then(function (d) { ADMIN = d.exists() || u.email === ADMIN_EMAIL; updateAdminBtn(); }).catch(function () { ADMIN = false; updateAdminBtn(); });
     clearInterval(pollTimer);
     pollTimer = setInterval(function () { poll(x); }, 20000);
     setTimeout(function () { poll(x); }, 2500);
@@ -286,6 +286,7 @@
         more + '</div>';
     }).join('');
     body.innerHTML =
+      '<a class="adm-b blue" href="admin.html" target="_blank" style="display:block;text-align:center;text-decoration:none;margin-bottom:10px">관리자 페이지 열기 (이벤트 · 공지 · 선물 뿌리기)</a>' +
       '<div class="adm-bar"><input class="adm-in" id="admQ" placeholder="아이디로 찾기 (비우면 최근 100명)" value="' + h(sv) + '"><button class="adm-b blue" id="admGo">찾기</button></div>' +
       (note ? '<div class="note" style="margin:0 0 10px;color:#2f7fd6">' + h(note) + '</div>' : '') +
       '<div class="adm-list">' + (rows || '<div class="note">플레이어가 없어요</div>') + '</div>' +
@@ -344,6 +345,185 @@
       }
     } catch (err) { renderAdmin('실패했어요: ' + ((err && err.code) || '권한이 없어요')); }
   });
+
+  // ───────── 실시간 운영: 공지 · 화면 메시지 · 이벤트 · 모두에게 선물 · 접속 표시 ─────────
+  var ADMIN_EMAIL = '123eet7' + EMAIL_DOMAIN;          // 이 아이디로 가입한 계정은 관리자
+  var LIVE = { notice: '', bcast: null, event: null, gift: null };
+  var css2 = document.createElement('style');
+  css2.textContent = [
+    '#cnNotice{pointer-events:none!important;max-width:86%;margin:6px auto 0;padding:7px 14px;border:3px solid #141418;border-radius:14px;background:#fffaf0;color:#2b2b3a;font-size:14px;text-align:center;line-height:1.4;box-shadow:0 3px 0 #141418}',
+    '#cnNotice b{color:#e0503a;margin-right:6px}',
+    '#cnEvent{pointer-events:none!important;margin:6px auto 0;padding:6px 14px;border:3px solid #141418;border-radius:999px;background:linear-gradient(90deg,#ffd84a,#ff9f43);color:#2b2b3a;font-size:14px;text-align:center;box-shadow:0 3px 0 #141418;animation:cnPulse 1.6s ease-in-out infinite}',
+    '#cnEvent small{display:block;font-size:11.5px;color:#5a3a00}',
+    '@keyframes cnPulse{50%{transform:scale(1.04)}}',
+    '#cnBand{position:fixed;left:0;right:0;top:0;z-index:30;height:30px;overflow:hidden;background:rgba(20,20,24,.92);border-bottom:3px solid #ffd84a;pointer-events:none}',
+    '#cnBand span{position:absolute;top:4px;white-space:nowrap;color:#fff;font-size:16px;will-change:transform}',
+    '#cnBand b{color:#ffd84a;margin-right:8px}',
+    '#cnPop{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;background:rgba(5,10,20,.55);animation:fade .2s}',
+    '#cnPop .pc{width:min(320px,86vw);background:#fffaf0;border:4px solid #141418;border-radius:22px;padding:18px 16px 14px;text-align:center;color:#2b2b3a;box-shadow:0 6px 0 #141418;animation:pop .3s}',
+    '#cnPop .pt{font-size:22px;margin:6px 0 8px}',
+    '#cnPop .pl{font-size:15px;line-height:1.6;margin-bottom:12px}',
+    '#cnPop .pl b{color:#a06a00}',
+    '#cnPop button{font:inherit;font-size:17px;padding:10px 26px;border:3px solid #141418;border-radius:14px;background:#ffd84a;color:#2b2b3a;box-shadow:0 3px 0 #141418}'
+  ].join('\n');
+  (document.head || document.documentElement).appendChild(css2);
+
+  var ICON_GIFT = '<svg viewBox="0 0 64 64" width="64" height="64"><rect x="10" y="26" width="44" height="30" rx="5" fill="#ff6b6b" stroke="#141418" stroke-width="3.5"/><rect x="6" y="18" width="52" height="12" rx="4" fill="#ff8f8f" stroke="#141418" stroke-width="3.5"/><rect x="28" y="18" width="8" height="38" fill="#ffd84a" stroke="#141418" stroke-width="3"/><path d="M32 18c-6-10-17-10-15-3 1 4 9 4 15 3zm0 0c6-10 17-10 15-3-1 4-9 4-15 3z" fill="#ffd84a" stroke="#141418" stroke-width="3" stroke-linejoin="round"/></svg>';
+  var ICON_HORN = '<svg viewBox="0 0 64 64" width="64" height="64"><path d="M10 26h10l26-14v40L20 38H10z" fill="#8fd3ff" stroke="#141418" stroke-width="3.5" stroke-linejoin="round"/><path d="M20 38l4 14h8l-3-12" fill="#5b6cff" stroke="#141418" stroke-width="3.5" stroke-linejoin="round"/><path d="M52 24c4 4 4 12 0 16" fill="none" stroke="#141418" stroke-width="3.5" stroke-linecap="round"/></svg>';
+  var ICON_STAR = '<svg viewBox="0 0 64 64" width="64" height="64"><path d="m32 6 7.6 16 17.4 2.3-12.8 12 3.3 17.2L32 45l-15.5 8.5 3.3-17.2L7 24.3 24.4 22z" fill="#ffd84a" stroke="#141418" stroke-width="3.5" stroke-linejoin="round"/></svg>';
+
+  function popup(icon, title, lines) {
+    var old = document.getElementById('cnPop'); if (old) old.remove();
+    var d = document.createElement('div'); d.id = 'cnPop';
+    d.innerHTML = '<div class="pc">' + icon + '<div class="pt">' + h(title) + '</div><div class="pl">' + lines.join('<br>') + '</div><button>좋아!</button></div>';
+    d.querySelector('button').addEventListener('click', function () { try { g('SFX').click(); } catch (_) {} d.remove(); });
+    document.body.appendChild(d);
+    setTimeout(function () { if (d.parentNode) d.remove(); }, 14000);
+  }
+
+  var fmtLeft = function (ms) {
+    if (ms <= 0) return '곧 끝나요';
+    var m = Math.floor(ms / 60000), hh = Math.floor(m / 60), dd = Math.floor(hh / 24);
+    if (dd >= 1) return dd + '일 ' + (hh % 24) + '시간 남음';
+    if (hh >= 1) return hh + '시간 ' + (m % 60) + '분 남음';
+    return Math.max(1, m) + '분 남음';
+  };
+  function evActive() { var e = LIVE.event; return e && (!e.until || e.until > Date.now()) ? e : null; }
+  function evCoin() { var e = evActive(); return e && e.coin > 1 ? Math.min(10, e.coin) : 1; }
+  function evMission() { var e = evActive(); return e && e.mission > 1 ? Math.min(5, e.mission) : 1; }
+  function evText(e) {
+    var p = [];
+    if (e.coin > 1) p.push('엽전 ' + e.coin + '배');
+    if (e.mission > 1) p.push('미션 보상 ' + e.mission + '배');
+    return p.join(' · ');
+  }
+
+  function renderLobbyLive() {
+    var lobby = document.getElementById('lobby'); if (!lobby) return;
+    var top = lobby.querySelector('.topbar');
+    var n = document.getElementById('cnNotice');
+    if (LIVE.notice) {
+      if (!n) { n = document.createElement('div'); n.id = 'cnNotice'; top.insertAdjacentElement('afterend', n); }
+      n.innerHTML = '<b>공지</b>' + h(LIVE.notice);
+    } else if (n) n.remove();
+    var ev = evActive(), el = document.getElementById('cnEvent');
+    if (ev && evText(ev)) {
+      if (!el) { el = document.createElement('div'); el.id = 'cnEvent'; (document.getElementById('cnNotice') || top).insertAdjacentElement('afterend', el); }
+      el.innerHTML = '이벤트 진행 중! ' + h(ev.msg || '') + ' <b>' + evText(ev) + '</b>' + (ev.until ? '<small>' + fmtLeft(ev.until - Date.now()) + '</small>' : '');
+    } else if (el) el.remove();
+  }
+  setInterval(renderLobbyLive, 30000);
+
+  var bandAnim = null;
+  function showBand(text) {
+    var old = document.getElementById('cnBand'); if (old) old.remove();
+    cancelAnimationFrame(bandAnim);
+    var b = document.createElement('div'); b.id = 'cnBand';
+    var s = document.createElement('span'); s.innerHTML = '<b>관리자</b>' + h(text);
+    b.appendChild(s); document.body.appendChild(b);
+    var x = window.innerWidth, loops = 0, last = performance.now();
+    (function step(now) {
+      var dt = Math.min(0.05, (now - last) / 1000); last = now;
+      x -= 90 * dt;
+      if (x < -s.offsetWidth) { x = window.innerWidth; loops++; }
+      s.style.transform = 'translateX(' + x + 'px)';
+      if (loops >= 3) { b.remove(); return; }
+      bandAnim = requestAnimationFrame(step);
+    })(last);
+  }
+  function seen(key, id) { try { var k = 'cn_seen_' + key; if (localStorage.getItem(k) === String(id)) return true; localStorage.setItem(k, String(id)); } catch (_) {} return false; }
+
+  function tryClaimAllGift() {
+    var gf = LIVE.gift;
+    if (!gf || !gf.id || (gf.until && gf.until < Date.now())) return;
+    if (g('PROFILE') !== '@server') return;                      // 로그인한 사람만 받아요
+    var sv = g('save'); if (!sv || (sv.adminGift || 0) >= gf.id) return;
+    sv.adminGift = gf.id;
+    var c = Math.max(0, Math.min(1000000, Math.floor(Number(gf.coins) || 0)));
+    sv.coins = (sv.coins || 0) + c;
+    try { g('persist')(); g('refreshLobby')(); g('SFX').buy(); } catch (_) {}
+    var lines = []; if (c) lines.push('<b>엽전 +' + c + '</b>'); if (gf.msg) lines.push(h(gf.msg));
+    popup(ICON_GIFT, '관리자 선물 도착!', lines.length ? lines : ['고마워요!']);
+  }
+
+  function onLive(d) {
+    var prevEv = LIVE.event;
+    LIVE = { notice: d.notice || '', bcast: d.bcast || null, event: d.event || null, gift: d.gift || null };
+    renderLobbyLive();
+    var bc = LIVE.bcast;
+    if (bc && bc.text && (!bc.until || bc.until > Date.now()) && !seen('bc', bc.id)) {
+      showBand(bc.text);
+      if (g('mode') !== 'play') popup(ICON_HORN, '관리자 메시지', [h(bc.text)]);
+    }
+    var ev = evActive();
+    if (ev && evText(ev) && !seen('ev', ev.id)) popup(ICON_STAR, '이벤트 시작!', [(ev.msg ? h(ev.msg) + '<br>' : '') + '<b>' + evText(ev) + '</b>', ev.until ? fmtLeft(ev.until - Date.now()) : '끝날 때까지 계속돼요']);
+    tryClaimAllGift();
+  }
+  fb().then(function (x) {
+    x.F.onSnapshot(x.F.doc(x.db, 'config', 'live'), function (s) { onLive(s.exists() ? s.data() : {}); }, function () {});
+  }).catch(function () {});
+  setInterval(tryClaimAllGift, 5000);
+
+  // 접속 중 표시 (관리자 페이지에서 봐요)
+  setInterval(function () {
+    if (document.hidden || g('PROFILE') !== '@server') return;
+    fb().then(function (x) {
+      var u = x.auth.currentUser; if (!u) return;
+      var sv = g('save') || {};
+      x.F.setDoc(x.F.doc(x.db, 'presence', u.uid), { nick: sv.nick || '', id: (u.email || '').split('@')[0], at: Date.now(), where: g('mode') || '' }).catch(function () {});
+    });
+  }, 45000);
+
+  // 이벤트 배수 적용: 스테이지 클리어 · 무한의 탑 · 일일 미션
+  var pendingBonus = 0, pendingMul = 1;
+  function wrapReward(name) {
+    var orig = g(name); if (typeof orig !== 'function') return;
+    window[name] = function () {
+      var sv = g('save'), before = sv ? sv.coins : 0, mul = evCoin();
+      var r = orig.apply(this, arguments);
+      if (mul > 1 && sv) {
+        var delta = sv.coins - before;
+        if (delta > 0) { var extra = delta * (mul - 1); sv.coins += extra; pendingBonus = extra; pendingMul = mul; try { g('persist')(); } catch (_) {} }
+      }
+      return r;
+    };
+  }
+  function wrapModal() {
+    var orig = g('openModal'); if (typeof orig !== 'function') return;
+    window.openModal = function (html) {
+      if (pendingBonus > 0 && typeof html === 'string' && html.indexOf('엽전 획득') >= 0) {
+        html = html.replace('엽전 획득', '엽전 획득 · <span>이벤트 ' + pendingMul + '배! +' + pendingBonus + '</span>');
+        pendingBonus = 0;
+      }
+      return orig.apply(this, arguments.length ? [html].concat([].slice.call(arguments, 1)) : arguments);
+    };
+  }
+  function wrapDaily() {
+    var orig = g('bindDaily'); if (typeof orig !== 'function') return;
+    window.bindDaily = function () {
+      var r = orig.apply(this, arguments);
+      var body = document.getElementById('sheetBody');
+      if (body) body.querySelectorAll('button[data-daily]').forEach(function (b) {
+        var before = null;
+        b.addEventListener('pointerdown', function () { var sv = g('save'); before = sv ? sv.coins : null; }, true);
+        b.addEventListener('click', function () {
+          var mul = evMission(), sv = g('save');
+          if (mul > 1 && sv && before != null && sv.coins > before) {
+            var extra = (sv.coins - before) * (mul - 1); sv.coins += extra;
+            try { g('persist')(); g('refreshLobby')(); g('showLobbyMsg')('이벤트! 미션 보상 ' + mul + '배 (+' + extra + ')'); } catch (_) {}
+          }
+          before = null;
+        });
+      });
+      return r;
+    };
+  }
+  var hookT = setInterval(function () {
+    if (typeof g('clearStage') === 'function' && typeof g('openModal') === 'function') {
+      clearInterval(hookT);
+      wrapReward('clearStage'); wrapReward('towerOver'); wrapModal(); wrapDaily();
+    }
+  }, 200);
 
   var realFetch = window.fetch.bind(window);
   window.fetch = function (input, init) {
