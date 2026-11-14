@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>구름발 닌자 관리자</title>
+<style>
+:root{--bg:#0f1220;--panel:#181c2e;--panel2:#20263d;--line:#2f3756;--text:#eef1fa;--dim:#9aa3c0;--accent:#5b8cff;--ok:#5ad19a;--warn:#ffb74d;--bad:#ff6b6b;--gold:#ffd84a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+header h1{font-size:18px;margin:0;flex:1;display:flex;align-items:center;gap:8px}
+header h1 svg{width:26px;height:26px}
+main{max-width:1280px;margin:0 auto;padding:16px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+button.danger{background:#4a1c22;border-color:var(--bad)}
+button:disabled{opacity:.5;cursor:default}
+input,select,textarea{background:#0b0e19;border:1px solid var(--line);border-radius:8px;padding:7px 9px;min-width:0}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+.card h3{margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;background:var(--accent)}
+.dot.g{background:var(--ok)}.dot.y{background:var(--gold)}.dot.r{background:var(--bad)}.dot.o{background:var(--warn)}
+.muted{color:var(--dim)}
+.login{max-width:360px;margin:60px auto;display:grid;gap:10px}
+.login h2{margin:0 0 4px;text-align:center}
+.err{color:var(--bad);min-height:20px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.stat b{display:block;font-size:22px}
+.stat span{color:var(--dim);font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;margin-bottom:14px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bar input{flex:1;min-width:140px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.checks{display:flex;flex-wrap:wrap;gap:12px;margin:6px 0}
+.checks label{display:flex;gap:6px;align-items:center}
+.now{margin-top:8px;padding:8px 10px;border-radius:8px;background:#0b0e19;border:1px dashed var(--line);color:var(--dim);font-size:13px}
+.now b{color:var(--text)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:860px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{background:var(--panel2);color:var(--dim);font-weight:600;font-size:12px}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:#1d2340}
+tbody tr.sel{background:#253064}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.tag{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;border:1px solid var(--line);margin-left:4px}
+.tag.ban{border-color:var(--bad);color:var(--bad)}
+.tag.on{border-color:var(--ok);color:var(--ok)}
+.tag.adm{border-color:var(--gold);color:var(--gold)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{padding:3px 10px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);font-size:13px}
+.chip small{color:var(--dim)}
+.detail{margin-top:14px;display:none}
+.detail.show{display:block}
+.dhead{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+.dhead h2{margin:0;font-size:20px}
+fieldset{border:1px solid var(--line);border-radius:12px;padding:12px;margin:0 0 12px}
+legend{padding:0 6px;color:var(--gold);font-weight:700}
+pre{background:#0b0e19;border:1px solid var(--line);border-radius:8px;padding:10px;max-height:260px;overflow:auto;font-size:12px;margin:0}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#22305e;border:1px solid var(--accent);padding:10px 16px;border-radius:10px;z-index:50;display:none}
+.rk{display:grid;gap:4px;margin-top:8px;max-height:280px;overflow:auto}
+.rk div{display:flex;gap:8px;align-items:center;padding:5px 8px;background:#0b0e19;border-radius:8px}
+.rk div span{flex:1}
+</style>
+</head>
+<body>
+<header>
+  <h1><svg viewBox="0 0 24 24"><path d="M12 2.5 4 5.6v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10v-6z" fill="#5b6cff" stroke="#141418" stroke-width="2" stroke-linejoin="round"/><path d="m12 7.2 1.5 3 3.3.5-2.4 2.3.6 3.3-3-1.6-3 1.6.6-3.3-2.4-2.3 3.3-.5z" fill="#ffd84a" stroke="#141418" stroke-width="1.3" stroke-linejoin="round"/></svg>구름발 닌자 · 관리자</h1>
+  <a href="./" class="muted" style="text-decoration:none">게임으로</a>
+  <span id="who" class="muted"></span>
+  <button id="logoutBtn" style="display:none">로그아웃</button>
+</header>
+<main>
+  <form id="loginBox" class="card login" autocomplete="on">
+    <h2>관리자 로그인</h2>
+    <p class="muted" style="margin:0;text-align:center">게임에 가입한 관리자 아이디와 비밀번호로 로그인해요</p>
+    <input id="lid" placeholder="아이디" autocomplete="username" required>
+    <input id="lpw" type="password" placeholder="비밀번호" autocomplete="current-password" required>
+    <button class="primary" type="submit">로그인</button>
+    <div class="err" id="lerr"></div>
+  </form>
+
+  <section id="app" style="display:none">
+    <div class="stats" id="stats"></div>
+
+    <div class="card" style="margin-bottom:14px"><h3><span class="dot g"></span>지금 접속 중 <span class="muted" style="font-weight:normal;font-size:12px">(2분 안에 게임을 켜 둔 사람 · 15초마다 새로고침)</span></h3><div id="onlineList" class="chips">-</div></div>
+
+    <div class="grid">
+      <section class="card">
+        <h3><span class="dot"></span>공지</h3>
+        <p class="muted" style="margin:0 0 6px">게임 로비 위쪽에 떠요. 비우고 저장하면 공지가 없어져요.</p>
+        <textarea id="noticeTxt" rows="2" maxlength="120" style="width:100%" placeholder="예: 오늘 밤 10시에 점검이 있어요"></textarea>
+        <div class="actions"><button id="noticeBtn" class="primary">공지 저장</button></div>
+        <div style="margin-top:14px"><b>화면 메시지</b> <span class="muted">게임을 켜 둔 모두의 화면 위에 흐르는 띠 + 큰 창으로 한 번 보여요</span></div>
+        <div class="bar" style="margin-top:6px"><input id="bcTxt" maxlength="80" placeholder="예: 10분 뒤 점검! 판을 마무리해 주세요"><select id="bcH"><option value="1">1시간</option><option value="6">6시간</option><option value="24" selected>하루</option><option value="72">3일</option></select></div>
+        <div class="actions"><button id="bcBtn" class="primary">보내기</button><button id="bcOff">끄기</button></div>
+        <div class="now" id="bcNow">-</div>
+      </section>
+
+      <section class="card">
+        <h3><span class="dot y"></span>이벤트</h3>
+        <p class="muted" style="margin:0 0 6px">켜면 게임을 켜 둔 모든 사람에게 <b>바로</b> 적용되고, 축하 창과 로비 안내가 떠요.</p>
+        <div class="checks">
+          <label>엽전 보상 <select id="evCoin"><option value="1">-</option><option>2</option><option>3</option><option>5</option><option>10</option></select>배</label>
+          <label>일일 미션 보상 <select id="evMission"><option value="1">-</option><option>2</option><option>3</option><option>5</option></select>배</label>
+        </div>
+        <div class="actions" style="margin-top:0">
+          <button data-preset="fever">피버 타임 (1시간 · 엽전 3배)</button>
+          <button data-preset="weekend">주말 (48시간 · 엽전·미션 2배)</button>
+          <button data-preset="jackpot">대박 데이 (24시간 · 엽전 5배)</button>
+        </div>
+        <div class="bar" style="margin-top:8px"><input id="evMsg" maxlength="40" placeholder="안내 문구 (예: 주말 특별 이벤트!)"><input id="evHours" type="number" min="0" max="720" placeholder="시간" style="max-width:90px;flex:0" title="몇 시간 동안 (0이나 비우면 끌 때까지)"></div>
+        <div class="actions"><button id="evOn" class="primary">이벤트 켜기 / 바꾸기</button><button id="evOff">이벤트 끄기</button></div>
+        <div class="now" id="evNow">-</div>
+      </section>
+
+      <section class="card">
+        <h3><span class="dot o"></span>선물 뿌리기</h3>
+        <p class="muted" style="margin:0 0 6px">로그인한 모든 사람이 <b>한 번씩</b> 받아요. 게임을 켜 둔 사람은 바로, 안 켠 사람은 기간 안에 들어오면 받아요. 새로 뿌리면 이전 선물은 끝나요.</p>
+        <div class="bar"><input id="gCoins" type="number" min="0" max="1000000" placeholder="엽전 개수"><input id="gHours" type="number" min="1" max="720" placeholder="72" style="max-width:90px;flex:0" title="몇 시간 동안 받을 수 있는지 (기본 72)"></div>
+        <div class="bar" style="margin-top:8px"><input id="gMsg" maxlength="50" placeholder="선물 메시지 (예: 접속해 줘서 고마워요!)"></div>
+        <div class="actions"><button id="giftOn" class="primary">모두에게 선물 보내기</button><button id="giftOff">선물 거두기</button></div>
+        <div class="now" id="giftNow">-</div>
+      </section>
+
+      <section class="card">
+        <h3><span class="dot r"></span>랭킹 관리</h3>
+        <p class="muted" style="margin:0 0 6px">순위를 보고, 이상한 기록을 빼요. 계속 이상하면 그 플레이어를 정지하세요 (정지하면 랭킹에서 완전히 빠져요).</p>
+        <div class="bar"><select id="rkBoard"><option value="tower">무한의 탑</option><option value="t0">1단계</option><option value="t1">2단계</option><option value="t2">3단계</option><option value="t3">4단계</option><option value="t4">5단계</option></select><button id="rkLoad">불러오기</button></div>
+        <div class="rk" id="rkList"></div>
+      </section>
+    </div>
+
+    <section class="card">
+      <h3><span class="dot"></span>플레이어</h3>
+      <div class="bar" style="margin-bottom:10px"><input id="q" placeholder="아이디 또는 닉네임으로 찾기"><button id="reload">새로고침</button><label class="muted"><input type="checkbox" id="onlyBan"> 정지된 사람만</label></div>
+      <div class="tablewrap"><table><thead><tr><th>닉네임</th><th>아이디</th><th class="num">엽전</th><th class="num">탑</th><th class="num">1단계</th><th class="num">2단계</th><th class="num">3단계</th><th class="num">4단계</th><th class="num">5단계</th><th>마지막 저장</th><th>상태</th></tr></thead><tbody id="tb"></tbody></table></div>
+      <div class="muted" id="cnt" style="margin-top:6px"></div>
+    </section>
+
+    <section class="card detail" id="detail">
+      <div class="dhead"><h2 id="dName">-</h2><span id="dTags"></span><span class="muted" id="dSub"></span><button id="dClose" style="margin-left:auto">닫기</button></div>
+      <div class="grid" style="margin-bottom:0">
+        <fieldset><legend>엽전 주기</legend>
+          <div class="bar"><input id="dCoin" type="number" min="1" max="1000000" placeholder="개수"><input id="dCoinMsg" maxlength="40" placeholder="메시지 (선택)"></div>
+          <div class="actions"><button data-add="100">+100</button><button data-add="500">+500</button><button data-add="1000">+1000</button><button id="dGive" class="primary">보내기</button></div>
+          <div class="muted" style="margin-top:6px;font-size:12px">게임을 켜 두고 있으면 20초 안에, 아니면 다음 접속 때 들어가요.</div>
+        </fieldset>
+        <fieldset><legend>정지</legend>
+          <div class="bar"><input id="dReason" maxlength="40" placeholder="사유 (선택, 본인에게 보여요)"></div>
+          <div class="actions"><button id="dBan" class="danger">정지하기</button><button id="dUnban">정지 풀기</button></div>
+          <div class="muted" style="margin-top:6px;font-size:12px">정지하면 바로 튕기고, 로그인할 수 없고, 랭킹에서 빠져요.</div>
+        </fieldset>
+      </div>
+      <fieldset><legend>저장 데이터 (보기만)</legend><pre id="dRaw">-</pre></fieldset>
+    </section>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+const V = '10.12.5', C = 'https://www.gstatic.com/firebasejs/' + V + '/';
+const [{ initializeApp }, A, F] = await Promise.all([import(C + 'firebase-app.js'), import(C + 'firebase-auth.js'), import(C + 'firebase-firestore.js')]);
+const app = initializeApp({
+  apiKey: "AIzaSyDNDvQbHbdzgrY_YGwqNZPb9r_xslIpwHk",
+  authDomain: "gureumbal-ninja.firebaseapp.com",
+  projectId: "gureumbal-ninja",
+  storageBucket: "gureumbal-ninja.firebasestorage.app",
+  messagingSenderId: "860322976809",
+  appId: "1:860322976809:web:7a4ae5d395d62305667838"
+});
+const auth = A.getAuth(app), db = F.getFirestore(app);
+const DOMAIN = '@gureumbal-ninja.game', ADMIN_EMAIL = '123eet7' + DOMAIN;
+const $ = id => document.getElementById(id);
+const h = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const toast = (t, bad) => { const el = $('toast'); el.textContent = t; el.style.borderColor = bad ? 'var(--bad)' : 'var(--accent)'; el.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(() => el.style.display = 'none', 2600); };
+const fmtT = t => { if (t == null) return '-'; const m = Math.floor(t / 60), s = (t % 60).toFixed(1); return m ? `${m}:${s.padStart(4, '0')}` : `${s}초`; };
+const ago = t => { if (!t) return '-'; const m = Math.floor((Date.now() - t) / 60000); if (m < 1) return '방금'; if (m < 60) return m + '분 전'; const hh = Math.floor(m / 60); if (hh < 24) return hh + '시간 전'; return Math.floor(hh / 24) + '일 전'; };
+const left = until => { if (!until) return '끌 때까지'; const ms = until - Date.now(); if (ms <= 0) return '끝남'; const m = Math.floor(ms / 60000), hh = Math.floor(m / 60); return hh >= 24 ? `${Math.floor(hh / 24)}일 ${hh % 24}시간 남음` : hh ? `${hh}시간 ${m % 60}분 남음` : `${Math.max(1, m)}분 남음`; };
+const LIVE = F.doc(db, 'config', 'live');
+const setLive = data => F.setDoc(LIVE, data, { merge: true });
+
+async function isAdmin(u) {
+  if (!u) return false;
+  if (u.email === ADMIN_EMAIL) return true;
+  try { return (await F.getDoc(F.doc(db, 'admins', u.uid))).exists(); } catch (_) { return false; }
+}
+
+// ───── 로그인 ─────
+$('loginBox').addEventListener('submit', async e => {
+  e.preventDefault(); $('lerr').textContent = '';
+  const id = $('lid').value.trim().toLowerCase(), pw = $('lpw').value;
+  try {
+    await A.signInWithEmailAndPassword(auth, id + DOMAIN, pw + '#cloud');
+  } catch (err) { $('lerr').textContent = '아이디나 비밀번호가 틀렸어요'; return; }
+  $('lpw').value = '';
+});
+$('logoutBtn').addEventListener('click', () => A.signOut(auth));
+let started = false, timers = [];
+A.onAuthStateChanged(auth, async u => {
+  timers.forEach(clearInterval); timers = [];
+  if (!u) { $('app').style.display = 'none'; $('loginBox').style.display = ''; $('logoutBtn').style.display = 'none'; $('who').textContent = ''; return; }
+  if (!(await isAdmin(u))) { $('lerr').textContent = '관리자 계정이 아니에요'; await A.signOut(auth); return; }
+  $('loginBox').style.display = 'none'; $('app').style.display = ''; $('logoutBtn').style.display = '';
+  $('who').textContent = (u.email || '').split('@')[0] + ' 님';
+  start();
+});
+
+// ───── 데이터 ─────
+let USERS = [], BANS = {}, PRES = {}, LIVED = {}, SEL = null;
+async function loadUsers() {
+  const [us, bs] = await Promise.all([F.getDocs(F.query(F.collection(db, 'users'), F.orderBy('updated', 'desc'), F.limit(500))), F.getDocs(F.collection(db, 'bans'))]);
+  BANS = {}; bs.docs.forEach(d => BANS[d.id] = d.data() || {});
+  USERS = us.docs.map(d => {
+    const v = d.data(); let sv = {}; try { sv = v.save ? JSON.parse(v.save) : {}; } catch (_) {}
+    const best = sv.best || {};
+    return { uid: d.id, id: v.id || '?', nick: v.nick || '닌자', coins: sv.coins || 0, tower: (sv.stats && sv.stats.tower) || 0, t: [0, 1, 2, 3, 4].map(i => best['s' + i] ? best['s' + i].time : null), updated: v.updated || 0, save: sv };
+  });
+  renderTable(); renderStats();
+}
+async function loadPresence() {
+  const ps = await F.getDocs(F.query(F.collection(db, 'presence'), F.where('at', '>', Date.now() - 120000)));
+  PRES = {}; ps.docs.forEach(d => PRES[d.id] = d.data());
+  const list = Object.entries(PRES).sort((a, b) => b[1].at - a[1].at);
+  $('onlineList').innerHTML = list.length ? list.map(([uid, p]) => `<span class="chip">${h(p.nick || p.id)} <small>@${h(p.id)} · ${p.where === 'play' ? '플레이 중' : '로비'}</small></span>`).join('') : '<span class="muted">지금은 아무도 없어요</span>';
+  renderStats();
+}
+function renderStats() {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const ev = LIVED.event, evOn = ev && (!ev.until || ev.until > Date.now());
+  const cards = [
+    ['가입한 닌자', USERS.length + (USERS.length >= 500 ? '+' : '')],
+    ['지금 접속', Object.keys(PRES).length],
+    ['오늘 저장한 사람', USERS.filter(u => u.updated >= today.getTime()).length],
+    ['정지된 계정', Object.keys(BANS).length],
+    ['이벤트', evOn ? [ev.coin > 1 ? '엽전 ' + ev.coin + '배' : '', ev.mission > 1 ? '미션 ' + ev.mission + '배' : ''].filter(Boolean).join(' · ') : '꺼짐']
+  ];
+  $('stats').innerHTML = cards.map(([k, v]) => `<div class="stat"><b>${h(v)}</b><span>${k}</span></div>`).join('');
+}
+function renderTable() {
+  const q = $('q').value.trim().toLowerCase(), onlyBan = $('onlyBan').checked;
+  const rows = USERS.filter(u => (!q || u.id.includes(q) || u.nick.toLowerCase().includes(q)) && (!onlyBan || BANS[u.uid]));
+  $('tb').innerHTML = rows.map(u => `<tr data-uid="${u.uid}" class="${SEL === u.uid ? 'sel' : ''}"><td>${h(u.nick)}</td><td>@${h(u.id)}</td><td class="num">${u.coins}</td><td class="num">${u.tower}m</td>${u.t.map(t => `<td class="num">${fmtT(t)}</td>`).join('')}<td>${ago(u.updated)}</td><td>${BANS[u.uid] ? '<span class="tag ban">정지</span>' : ''}${PRES[u.uid] ? '<span class="tag on">접속 중</span>' : ''}${u.id === '123eet7' ? '<span class="tag adm">관리자</span>' : ''}</td></tr>`).join('') || '<tr><td colspan="11" class="muted">플레이어가 없어요</td></tr>';
+  $('cnt').textContent = `${rows.length}명 표시 (최근 저장한 순서, 최대 500명)`;
+}
+$('tb').addEventListener('click', e => { const tr = e.target.closest('tr[data-uid]'); if (tr) openDetail(tr.dataset.uid); });
+$('q').addEventListener('input', renderTable); $('onlyBan').addEventListener('change', renderTable);
+$('reload').addEventListener('click', () => loadUsers().then(() => toast('새로고침했어요')));
+
+function openDetail(uid) {
+  SEL = uid; const u = USERS.find(x => x.uid === uid); if (!u) return;
+  $('dName').textContent = u.nick;
+  $('dTags').innerHTML = (BANS[uid] ? '<span class="tag ban">정지' + (BANS[uid].reason ? ' · ' + h(BANS[uid].reason) : '') + '</span>' : '') + (PRES[uid] ? '<span class="tag on">접속 중</span>' : '');
+  $('dSub').textContent = `@${u.id} · 엽전 ${u.coins} · 탑 ${u.tower}m · 마지막 저장 ${ago(u.updated)}`;
+  $('dRaw').textContent = JSON.stringify(u.save, null, 2);
+  $('detail').classList.add('show'); renderTable();
+  $('detail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+$('dClose').addEventListener('click', () => { SEL = null; $('detail').classList.remove('show'); renderTable(); });
+document.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', () => { $('dCoin').value = (+$('dCoin').value || 0) + +b.dataset.add; }));
+$('dGive').addEventListener('click', async () => {
+  const n = Math.floor(+$('dCoin').value); const u = USERS.find(x => x.uid === SEL);
+  if (!u || !(n > 0 && n <= 1000000)) return toast('1 ~ 1000000 사이로 적어주세요', true);
+  try { await F.addDoc(F.collection(db, 'users', u.uid, 'gifts'), { coins: n, msg: $('dCoinMsg').value.trim(), at: Date.now(), by: auth.currentUser.uid }); $('dCoin').value = ''; $('dCoinMsg').value = ''; toast(`${u.nick}에게 엽전 ${n}개를 보냈어요`); }
+  catch (e) { toast('실패했어요: ' + (e.code || e), true); }
+});
+$('dBan').addEventListener('click', async () => {
+  const u = USERS.find(x => x.uid === SEL); if (!u) return;
+  if (u.uid === auth.currentUser.uid) return toast('자기 자신은 정지할 수 없어요', true);
+  if (!confirm(`${u.nick}(@${u.id}) 계정을 정지할까요?`)) return;
+  try {
+    await F.setDoc(F.doc(db, 'bans', u.uid), { reason: $('dReason').value.trim(), at: Date.now(), by: auth.currentUser.uid });
+    try { await F.deleteDoc(F.doc(db, 'ranks', u.uid)); } catch (_) {}
+    BANS[u.uid] = { reason: $('dReason').value.trim() }; $('dReason').value = ''; openDetail(u.uid); renderStats(); toast(`${u.nick} 계정을 정지했어요`);
+  } catch (e) { toast('실패했어요: ' + (e.code || e), true); }
+});
+$('dUnban').addEventListener('click', async () => {
+  const u = USERS.find(x => x.uid === SEL); if (!u) return;
+  try { await F.deleteDoc(F.doc(db, 'bans', u.uid)); delete BANS[u.uid]; openDetail(u.uid); renderStats(); toast(`${u.nick} 계정의 정지를 풀었어요`); }
+  catch (e) { toast('실패했어요: ' + (e.code || e), true); }
+});
+
+// ───── 공지 · 화면 메시지 · 이벤트 · 선물 ─────
+function renderLive() {
+  const d = LIVED;
+  if (document.activeElement !== $('noticeTxt')) $('noticeTxt').value = d.notice || '';
+  const bc = d.bcast, bcOn = bc && bc.text && (!bc.until || bc.until > Date.now());
+  $('bcNow').innerHTML = bcOn ? `지금: <b>${h(bc.text)}</b> · ${left(bc.until)}` : '보낸 화면 메시지가 없어요';
+  const ev = d.event, evOn = ev && (!ev.until || ev.until > Date.now());
+  $('evNow').innerHTML = evOn ? `진행 중: <b>${[ev.coin > 1 ? '엽전 ' + ev.coin + '배' : '', ev.mission > 1 ? '미션 보상 ' + ev.mission + '배' : ''].filter(Boolean).join(' · ')}</b>${ev.msg ? ' · ' + h(ev.msg) : ''} · ${left(ev.until)}` : '이벤트가 꺼져 있어요';
+  const gf = d.gift, gOn = gf && gf.id && (!gf.until || gf.until > Date.now());
+  $('giftNow').innerHTML = gOn ? `뿌리는 중: <b>엽전 ${gf.coins}</b>${gf.msg ? ' · ' + h(gf.msg) : ''} · ${left(gf.until)}` : '뿌리는 선물이 없어요';
+  renderStats();
+}
+$('noticeBtn').addEventListener('click', async () => { try { await setLive({ notice: $('noticeTxt').value.trim() }); toast('공지를 저장했어요'); } catch (e) { toast('실패했어요: ' + (e.code || e), true); } });
+$('bcBtn').addEventListener('click', async () => {
+  const t = $('bcTxt').value.trim(); if (!t) return toast('메시지를 적어주세요', true);
+  try { await setLive({ bcast: { text: t, until: Date.now() + (+$('bcH').value) * 3600e3, id: Date.now() } }); $('bcTxt').value = ''; toast('모두에게 보냈어요'); } catch (e) { toast('실패했어요: ' + (e.code || e), true); }
+});
+$('bcOff').addEventListener('click', async () => { await setLive({ bcast: null }); toast('화면 메시지를 껐어요'); });
+const PRESETS = { fever: { coin: 3, mission: 1, h: 1, msg: '피버 타임!' }, weekend: { coin: 2, mission: 2, h: 48, msg: '주말 특별 이벤트!' }, jackpot: { coin: 5, mission: 1, h: 24, msg: '대박 데이!' } };
+document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => {
+  const p = PRESETS[b.dataset.preset]; $('evCoin').value = String(p.coin); $('evMission').value = String(p.mission); $('evHours').value = p.h; $('evMsg').value = p.msg; toast('설정을 채웠어요. "이벤트 켜기"를 누르면 시작돼요');
+}));
+$('evOn').addEventListener('click', async () => {
+  const coin = +$('evCoin').value, mission = +$('evMission').value, hrs = +$('evHours').value || 0;
+  if (coin <= 1 && mission <= 1) return toast('엽전이나 미션 배수를 골라주세요', true);
+  try { await setLive({ event: { coin, mission, msg: $('evMsg').value.trim(), until: hrs ? Date.now() + hrs * 3600e3 : 0, id: Date.now() } }); toast('이벤트를 켰어요'); } catch (e) { toast('실패했어요: ' + (e.code || e), true); }
+});
+$('evOff').addEventListener('click', async () => { await setLive({ event: null }); toast('이벤트를 껐어요'); });
+$('giftOn').addEventListener('click', async () => {
+  const c = Math.floor(+$('gCoins').value), hrs = +$('gHours').value || 72;
+  if (!(c > 0 && c <= 1000000)) return toast('엽전을 1 ~ 1000000 사이로 적어주세요', true);
+  if (!confirm(`로그인한 모든 사람에게 엽전 ${c}개를 보낼까요?`)) return;
+  try { await setLive({ gift: { id: Date.now(), coins: c, msg: $('gMsg').value.trim(), until: Date.now() + hrs * 3600e3 } }); $('gCoins').value = ''; $('gMsg').value = ''; toast('모두에게 선물을 뿌렸어요'); } catch (e) { toast('실패했어요: ' + (e.code || e), true); }
+});
+$('giftOff').addEventListener('click', async () => { await setLive({ gift: null }); toast('선물을 거뒀어요'); });
+
+// ───── 랭킹 ─────
+async function loadRank() {
+  const b = $('rkBoard').value;
+  const s = await F.getDocs(F.query(F.collection(db, 'ranks'), F.orderBy(b, b === 'tower' ? 'desc' : 'asc'), F.limit(50)));
+  const list = s.docs.map(d => ({ uid: d.id, ...d.data() })).filter(d => typeof d[b] === 'number');
+  $('rkList').innerHTML = list.length ? list.map((d, i) => `<div><b>${i + 1}</b><span>${h(d.nick || '닌자')}</span><b>${b === 'tower' ? d[b] + 'm' : fmtT(d[b])}</b><button data-rkdel="${d.uid}">빼기</button></div>`).join('') : '<div class="muted">기록이 없어요</div>';
+}
+$('rkLoad').addEventListener('click', () => loadRank().catch(e => toast('실패했어요: ' + (e.code || e), true)));
+$('rkBoard').addEventListener('change', () => loadRank().catch(() => {}));
+$('rkList').addEventListener('click', async e => {
+  const b = e.target.closest('[data-rkdel]'); if (!b) return;
+  const board = $('rkBoard').value;
+  try { await F.updateDoc(F.doc(db, 'ranks', b.dataset.rkdel), { [board]: F.deleteField() }); toast('랭킹에서 뺐어요 (그 사람이 기록을 다시 세우면 다시 올라와요)'); loadRank(); }
+  catch (err) { toast('실패했어요: ' + (err.code || err), true); }
+});
+
+function start() {
+  if (!started) { started = true; F.onSnapshot(LIVE, s => { LIVED = s.exists() ? s.data() : {}; renderLive(); }, () => {}); }
+  loadUsers().catch(e => toast('플레이어를 불러오지 못했어요: ' + (e.code || e), true));
+  loadPresence().catch(() => {});
+  loadRank().catch(() => {});
+  timers.push(setInterval(() => loadPresence().catch(() => {}), 15000));
+  timers.push(setInterval(renderLive, 30000));
+}
+</script>
+</body>
+</html>
