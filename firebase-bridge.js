@@ -112,7 +112,20 @@
     if (route === 'POST /api/login') {
       var lid = String(body.id || '').trim().toLowerCase(), lpw = String(body.pw || '');
       try { await A.signInWithEmailAndPassword(auth, emailOf(lid), pwOf(lpw)); }
-      catch (e) { return authError(e); }
+      catch (e) {
+        // 관리자 아이디는 회원가입 없이 처음 로그인할 때 바로 계정이 만들어져요
+        var code = (e && e.code) || '';
+        if (lid + EMAIL_DOMAIN === ADMIN_EMAIL && lpw.length >= 4 && /invalid-credential|user-not-found|invalid-login/.test(code)) {
+          try {
+            var ac = await A.createUserWithEmailAndPassword(auth, emailOf(lid), pwOf(lpw));
+            await F.setDoc(F.doc(db, 'users', ac.user.uid), { id: lid, nick: '관리자', save: null, updated: Date.now() });
+            await F.setDoc(F.doc(db, 'ranks', ac.user.uid), { nick: '관리자' });
+          } catch (e2) {
+            if (((e2 && e2.code) || '').indexOf('email-already-in-use') >= 0) return out(401, { error: '아이디나 비밀번호가 틀렸어요' });
+            return authError(e2);
+          }
+        } else return authError(e);
+      }
       return me(x);
     }
 
