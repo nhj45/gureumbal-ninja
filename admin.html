@@ -156,6 +156,11 @@ pre{background:#0b0e19;border:1px solid var(--line);border-radius:8px;padding:10
           <div class="actions"><button id="dMsgBtn" class="primary">보내기</button></div>
           <div class="muted" style="margin-top:6px;font-size:12px">게임을 켜 두고 있으면 바로 "관리자 메시지" 창이 떠요 (플레이 중이면 위쪽 띠 + 판이 끝나자마자 창).</div>
         </fieldset>
+        <fieldset><legend>캐릭터 선물</legend>
+          <div class="bar"><select id="dChar"><option value="ninjo">닌죠 (관리자 전용 · 칼 세 자루 검술 닌자)</option></select></div>
+          <div class="actions"><button id="dCharBtn" class="primary">선물하기</button></div>
+          <div class="muted" style="margin-top:6px;font-size:12px">상점에서 살 수 없는 캐릭터예요. 받으면 바로 "관리자 선물 도착!" 창이 뜨고 그 캐릭터로 바뀌어요.</div>
+        </fieldset>
         <fieldset><legend>정지</legend>
           <div class="bar"><input id="dReason" maxlength="40" placeholder="사유 (선택, 본인에게 보여요)"></div>
           <div class="actions"><button id="dBan" class="danger">정지하기</button><button id="dUnban">정지 풀기</button></div>
@@ -311,6 +316,11 @@ $('dMsgBtn').addEventListener('click', async () => {
   catch (e) { toast('실패했어요: ' + (e.code || e), true); }
 });
 $('dMsg').addEventListener('keydown', e => { if (e.key === 'Enter') $('dMsgBtn').click(); });
+$('dCharBtn').addEventListener('click', async () => {
+  const u = USERS.find(x => x.uid === SEL); if (!u) return;
+  try { await F.addDoc(F.collection(db, 'users', u.uid, 'gifts'), { coins: 0, char: $('dChar').value, msg: '', at: Date.now(), by: auth.currentUser.uid }); toast(u.nick + '에게 닌죠를 선물했어요'); }
+  catch (e) { toast('실패했어요: ' + (e.code || e), true); }
+});
 $('dBan').addEventListener('click', async () => {
   const u = USERS.find(x => x.uid === SEL); if (!u) return;
   if (u.uid === auth.currentUser.uid) return toast('자기 자신은 정지할 수 없어요', true);
