@@ -1598,3 +1598,53 @@
     row.querySelector('#btnBz').addEventListener('click', function () { try { E('SFX').click(); } catch (_) {} open(); });
   }, 300);
 })();
+
+// ── 스프링 애니메이션: 밟으면 꾹 눌렸다가 튕겨 오르고 출렁이며 멈춰요 ──
+(function () {
+  var E = function (s) { return (0, eval)(s); };
+  var DUR = 0.75;
+  var hook = setInterval(function () {
+    var ok; try { ok = typeof E('drawSpring') === 'function' && typeof E('doSpring') === 'function'; } catch (_) { ok = false; }
+    if (!ok) return; clearInterval(hook);
+    var oDo = E('doSpring');
+    window.doSpring = function (p, tx, ty) {
+      var r = oDo.apply(this, arguments);
+      try { E('springAnim')[tx + ',' + ty] = DUR; } catch (_) {}
+      return r;
+    };
+    window.drawSpring = function (g, tx, ty, k) {
+      var T = E('T'), TAU = Math.PI * 2, rr = E('rr'), time = E('time');
+      var x = tx * T, y = ty * T, off, sx = 1;
+      if (k > 0) {
+        var p = Math.min(1, 1 - k / DUR);
+        off = p < 0.1 ? 12 * (p / 0.1) : 12 * Math.cos((p - 0.1) / 0.9 * Math.PI * 5) * Math.exp(-4.2 * (p - 0.1) / 0.9);
+      } else off = Math.sin(time * 3 + tx * 1.3) * 1.2;
+      sx = 1 + Math.max(-0.12, Math.min(0.2, off * 0.018));
+      var top = y + 8 + off;
+      g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(x + T / 2, y + T, 14 * sx, 3, 0, 0, TAU); g.fill();
+      var bg = g.createLinearGradient(0, y + T - 8, 0, y + T); bg.addColorStop(0, '#8a6038'); bg.addColorStop(1, '#4e331a');
+      g.fillStyle = bg; rr(g, x + 2, y + T - 7, T - 4, 7, 2); g.fill();
+      var hh = (y + T - 7) - (top + 5), n = 5, w = (T - 16) * (1 + Math.max(0, off) * 0.03);
+      g.lineCap = 'round'; g.lineJoin = 'round';
+      g.beginPath(); g.moveTo(x + T / 2 - w / 2, y + T - 7);
+      for (var i = 1; i <= n; i++) g.lineTo(i % 2 ? x + T / 2 + w / 2 : x + T / 2 - w / 2, y + T - 7 - hh * i / n);
+      g.strokeStyle = '#2f7a2c'; g.lineWidth = 4; g.stroke();
+      g.strokeStyle = '#8fe070'; g.lineWidth = 1.5; g.stroke(); g.lineCap = 'butt'; g.lineJoin = 'miter';
+      var pw = T * sx, px = x + (T - pw) / 2, ph = 7 / Math.max(0.85, sx);
+      var pg = g.createLinearGradient(0, top, 0, top + ph); pg.addColorStop(0, '#ff7a5e'); pg.addColorStop(1, '#c23a26');
+      g.fillStyle = pg; rr(g, px, top, pw, ph, 3.5); g.fill();
+      g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(px + 4, top + 1.2, pw - 8, 1.6);
+      if (k > 0 && k > DUR - 0.25) {                       // 튕길 때 위로 뻗는 바람 줄기
+        var a = (k - (DUR - 0.25)) / 0.25; g.globalAlpha = a * 0.8; g.strokeStyle = '#ffffff'; g.lineWidth = 2;
+        for (var j = -1; j <= 1; j++) { g.beginPath(); g.moveTo(x + T / 2 + j * 9, top - 4); g.lineTo(x + T / 2 + j * 11, top - 4 - 22 * (1 - a) - 6); g.stroke(); }
+        g.globalAlpha = 1;
+      }
+      if (k <= 0) {
+        g.globalAlpha = 0.5 + 0.5 * Math.sin(time * 5);
+        var ay = top - 6 - Math.abs(Math.sin(time * 4)) * 3;
+        g.fillStyle = '#fff'; g.beginPath(); g.moveTo(x + T / 2, ay - 5); g.lineTo(x + T / 2 - 4, ay); g.lineTo(x + T / 2 + 4, ay); g.fill();
+        g.globalAlpha = 1;
+      }
+    };
+  }, 300);
+})();
