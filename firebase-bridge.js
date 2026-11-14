@@ -319,13 +319,18 @@
       return '<div class="adm-row' + (b ? ' banned' : '') + '" data-uid="' + r.uid + '">' +
         '<div class="adm-top"><div class="adm-name">' + h(r.nick) + '<small>@' + h(r.id) + '</small>' + (b ? '<span class="adm-tag">정지됨</span>' : '') + '</div>' +
         '<button class="adm-b" data-act="coin">코인 주기</button>' +
+        '<button class="adm-b" data-give="ninjo" style="background:#2b3a6b;color:#fff">닌죠 주기</button>' +
         (b ? '<button class="adm-b gray" data-act="unban">정지 풀기</button>'
            : '<button class="adm-b red" data-act="ban">' + (admArm === r.uid ? '정말 정지?' : '정지') + '</button>') +
         '</div>' +
         '<div class="adm-info">코인 ' + r.coins + ' · 탑 ' + r.tower + 'm · 마지막 저장 ' + ago(r.updated) + (b && b.reason ? ' · 사유: ' + h(b.reason) : '') + '</div>' +
         more + '</div>';
     }).join('');
+    var myC = 0; try { myC = g('save').coins; } catch (_) {}
     body.innerHTML =
+      '<div class="adm-row" style="margin-bottom:10px"><div class="adm-top"><div class="adm-name">내 코인 <b id="admMyC">' + myC + '</b></div></div>' +
+        '<div class="adm-more"><button class="adm-b" data-self="1000">+1000</button><button class="adm-b" data-self="10000">+10000</button><button class="adm-b" data-self="100000">+100000</button>' +
+        '<input class="adm-in" id="admSelf" type="number" inputmode="numeric" placeholder="직접 입력" style="flex:1 1 90px"><button class="adm-b blue" data-self="custom">넣기</button></div></div>' +
       '<a class="adm-b blue" href="admin.html" target="_blank" style="display:block;text-align:center;text-decoration:none;margin-bottom:10px">관리자 페이지 열기 (이벤트 · 공지 · 선물 뿌리기)</a>' +
       '<div class="adm-bar"><input class="adm-in" id="admQ" placeholder="아이디로 찾기 (비우면 최근 100명)" value="' + h(sv) + '"><button class="adm-b blue" id="admGo">찾기</button></div>' +
       (note ? '<div class="note" style="margin:0 0 10px;color:#2f7fd6">' + h(note) + '</div>' : '') +
@@ -353,6 +358,14 @@
     try {
       if (t.id === 'admGo') {
         await loadAdmin(x, document.getElementById('admQ').value.trim()); admOpen = null; admArm = null; renderAdmin();
+        return;
+      }
+      if (t.dataset.self) {
+        var sn = t.dataset.self === 'custom' ? Math.floor(Number(document.getElementById('admSelf').value)) : Number(t.dataset.self);
+        if (!(sn > 0 && sn <= 10000000)) { renderAdmin('1 ~ 10000000 사이로 적어주세요'); return; }
+        var sv0 = g('save'); sv0.coins += sn;
+        try { g('persist')(); } catch (_) {} try { g('refreshLobby')(); } catch (_) {} try { g('SFX').buy(); } catch (_) {}
+        renderAdmin('내 코인에 ' + sn + '개를 넣었어요');
         return;
       }
       if (!r) return;
