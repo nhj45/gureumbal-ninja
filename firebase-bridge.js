@@ -491,8 +491,11 @@
   function wrapModal() {
     var orig = g('openModal'); if (typeof orig !== 'function') return;
     window.openModal = function (html) {
-      if (pendingBonus > 0 && typeof html === 'string' && html.indexOf('엽전 획득') >= 0) {
-        html = html.replace('엽전 획득', '엽전 획득 · <span>이벤트 ' + pendingMul + '배! +' + pendingBonus + '</span>');
+      var ei = typeof html === 'string' ? html.indexOf('class="earn"') : -1;
+      if (pendingBonus > 0 && ei >= 0) {
+        var ce = html.indexOf('</div>', ei);
+        html = html.slice(0, ei) + 'class="earn" style="flex-wrap:wrap;row-gap:2px"' + html.slice(ei + 12, ce) +
+          '<span style="flex-basis:100%;text-align:center;font-size:15px">이벤트 ' + pendingMul + '배 보너스 +' + pendingBonus + '</span>' + html.slice(ce);
         pendingBonus = 0;
       }
       return orig.apply(this, arguments.length ? [html].concat([].slice.call(arguments, 1)) : arguments);
