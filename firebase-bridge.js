@@ -119,7 +119,6 @@
           try {
             var ac = await A.createUserWithEmailAndPassword(auth, emailOf(lid), pwOf(lpw));
             await F.setDoc(F.doc(db, 'users', ac.user.uid), { id: lid, nick: '관리자', save: null, updated: Date.now() });
-            await F.setDoc(F.doc(db, 'ranks', ac.user.uid), { nick: '관리자' });
           } catch (e2) {
             if (((e2 && e2.code) || '').indexOf('email-already-in-use') >= 0) return out(401, { error: '아이디나 비밀번호가 틀렸어요' });
             return authError(e2);
@@ -153,7 +152,7 @@
       var nickNow = cleanNick(body.save.nick) || null;
       var rdoc = Object.assign({ updated: now }, r);
       if (nickNow) rdoc.nick = nickNow;
-      await F.setDoc(F.doc(db, 'ranks', user.uid), rdoc, { merge: true });
+      if (user.email !== ADMIN_EMAIL) await F.setDoc(F.doc(db, 'ranks', user.uid), rdoc, { merge: true });   // 관리자는 랭킹에 안 올라가요
       return out(200, { ok: true, at: now });
     }
 
@@ -200,7 +199,8 @@
   var pollTimer = null;
   function afterLogin(x) {
     var u = x.auth.currentUser; if (!u) return;
-    x.F.getDoc(x.F.doc(x.db, 'admins', u.uid)).then(function (d) { ADMIN = d.exists() || u.email === ADMIN_EMAIL; updateAdminBtn(); }).catch(function () { ADMIN = false; updateAdminBtn(); });
+    x.F.getDoc(x.F.doc(x.db, 'admins', u.uid)).then(function (d) { ADMIN = d.exists() || u.email === ADMIN_EMAIL; updateAdminBtn();
+      if (ADMIN) { x.F.deleteDoc(x.F.doc(x.db, 'ranks', u.uid)).catch(function () {}); x.F.deleteDoc(x.F.doc(x.db, 'presence', u.uid)).catch(function () {}); } }).catch(function () { ADMIN = false; updateAdminBtn(); });
     clearInterval(pollTimer);
     pollTimer = setInterval(function () { poll(x); }, 20000);
     setTimeout(function () { poll(x); }, 2500);
@@ -279,7 +279,8 @@
       ? F.query(F.collection(db, 'users'), F.where('id', '==', search.toLowerCase()))
       : F.query(F.collection(db, 'users'), F.orderBy('updated', 'desc'), F.limit(100));
     var snap = await F.getDocs(q);
-    admRows = snap.docs.map(function (d) {
+    var me = x.auth.currentUser && x.auth.currentUser.uid, adminId = ADMIN_EMAIL.split('@')[0];
+    admRows = snap.docs.filter(function (d) { var v = d.data(); return d.id !== me && v.id !== adminId; }).map(function (d) {   // 관리자 자신은 목록에서 빼요
       var v = d.data(), sv = {}; try { sv = v.save ? JSON.parse(v.save) : {}; } catch (_) {}
       return { uid: d.id, id: v.id || '?', nick: v.nick || '닌자', coins: sv.coins || 0, tower: (sv.stats && sv.stats.tower) || 0, updated: v.updated || 0 };
     });
@@ -533,7 +534,7 @@
   setInterval(function () {
     if (document.hidden || g('PROFILE') !== '@server') return;
     fb().then(function (x) {
-      var u = x.auth.currentUser; if (!u) return;
+      var u = x.auth.currentUser; if (!u || ADMIN) return;           // 관리자는 접속 목록에 안 보여요
       var sv = g('save') || {};
       x.F.setDoc(x.F.doc(x.db, 'presence', u.uid), { nick: sv.nick || '', id: (u.email || '').split('@')[0], at: Date.now(), where: g('mode') || '' }).catch(function () {});
     });
