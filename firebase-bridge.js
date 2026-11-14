@@ -153,7 +153,11 @@
       var rdoc = Object.assign({ updated: now, title: titleOf(body.save) }, r);
       if (nickNow) rdoc.nick = nickNow;
       rdoc.statue = Math.max(0, Math.min(5, Number(body.save.cnStatue) || 0)); rdoc.look = String(body.save.cnChar || 'basic').slice(0, 20);   // 돌동상 (다른 사람에게도 보여요)
-      if (user.email !== ADMIN_EMAIL) await F.setDoc(F.doc(db, 'ranks', user.uid), rdoc, { merge: true });   // 관리자는 랭킹에 안 올라가요
+      if (user.email !== ADMIN_EMAIL) await F.setDoc(F.doc(db, 'ranks', user.uid), rdoc, { merge: true });
+      else {                                            // 관리자는 랭킹에는 안 올라가고, 동상만 다른 사람에게 보여요
+        var an = nickNow; if (!an) { try { var ud = await F.getDoc(F.doc(db, 'users', user.uid)); an = (ud.exists() && ud.data().nick) || '관리자'; } catch (_) { an = '관리자'; } }
+        await F.setDoc(F.doc(db, 'ranks', user.uid), { updated: now, nick: an, statue: rdoc.statue, look: rdoc.look });
+      }
       return out(200, { ok: true, at: now });
     }
 
@@ -201,7 +205,7 @@
   function afterLogin(x) {
     var u = x.auth.currentUser; if (!u) return;
     x.F.getDoc(x.F.doc(x.db, 'admins', u.uid)).then(function (d) { ADMIN = d.exists() || u.email === ADMIN_EMAIL; updateAdminBtn();
-      if (ADMIN) { x.F.deleteDoc(x.F.doc(x.db, 'ranks', u.uid)).catch(function () {}); x.F.deleteDoc(x.F.doc(x.db, 'presence', u.uid)).catch(function () {}); } }).catch(function () { ADMIN = false; updateAdminBtn(); });
+      if (ADMIN) { var rmF = { tower: x.F.deleteField(), title: x.F.deleteField() }; for (var si = 0; si < STAGE_COUNT; si++) rmF['t' + si] = x.F.deleteField(); x.F.updateDoc(x.F.doc(x.db, 'ranks', u.uid), rmF).catch(function () {}); x.F.deleteDoc(x.F.doc(x.db, 'presence', u.uid)).catch(function () {}); } }).catch(function () { ADMIN = false; updateAdminBtn(); });
     clearInterval(pollTimer);
     pollTimer = setInterval(function () { poll(x); }, 20000);
     setTimeout(function () { poll(x); }, 2500);
@@ -1302,11 +1306,11 @@
 (function () {
   var E = function (s) { return (0, eval)(s); };
   var TIERS = window.__STATUE_TIERS = [
-    { name: '돌', price: 500, d: '단단한 회색 돌로 만든 동상', base: [150, 146, 138], hi: [210, 206, 198], ped: ['#b9b4aa', '#7d776d'] },
-    { name: '금', price: 1000, d: '번쩍번쩍 황금 동상', base: [200, 140, 20], hi: [255, 228, 110], ped: ['#ffe27a', '#b8860b'] },
-    { name: '다이아', price: 1500, d: '반짝이는 하늘빛 다이아 동상', base: [110, 190, 235], hi: [235, 250, 255], ped: ['#d8f4ff', '#6fb6d8'] },
-    { name: '에메랄드', price: 2000, d: '깊은 초록빛 에메랄드 동상', base: [20, 140, 80], hi: [140, 240, 170], ped: ['#8fe8b0', '#1f7a4a'] },
-    { name: '루비', price: 2500, d: '타오르는 붉은 루비 동상 (최고 등급)', base: [160, 20, 45], hi: [255, 120, 140], ped: ['#ff9aaa', '#8a1a2e'] }
+    { name: '돌', price: 1000, d: '단단한 회색 돌로 만든 동상', base: [150, 146, 138], hi: [210, 206, 198], ped: ['#b9b4aa', '#7d776d'] },
+    { name: '금', price: 2000, d: '번쩍번쩍 황금 동상', base: [200, 140, 20], hi: [255, 228, 110], ped: ['#ffe27a', '#b8860b'] },
+    { name: '다이아', price: 3000, d: '반짝이는 하늘빛 다이아 동상', base: [110, 190, 235], hi: [235, 250, 255], ped: ['#d8f4ff', '#6fb6d8'] },
+    { name: '에메랄드', price: 4000, d: '깊은 초록빛 에메랄드 동상', base: [20, 140, 80], hi: [140, 240, 170], ped: ['#8fe8b0', '#1f7a4a'] },
+    { name: '루비', price: 5000, d: '타오르는 붉은 루비 동상 (최고 등급)', base: [160, 20, 45], hi: [255, 120, 140], ped: ['#ff9aaa', '#8a1a2e'] }
   ];
   function tierOf(n) { return TIERS[Math.max(1, Math.min(TIERS.length, n || 1)) - 1]; }
   var cache = {}, cacheAt = {};
@@ -1429,10 +1433,10 @@
   }
   function fx(t, x, y, col, size) { st.fx.push({ k: 'txt', t: t, x: x, y: y, vy: -50, life: 0.9, max: 0.9, col: col, size: size || 15 }); }
   function boom(x, y, col, n) { for (var i = 0; i < n; i++) { var a = Math.random() * 6.283, sp = 60 + Math.random() * 200; st.fx.push({ k: 'dot', x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 100, life: 0.5, max: 0.5, col: col }); } }
-  function earn(n, x, y) {
-    if (st.bz > 0) n *= 2;
-    var s = S(); if (s) s.coins += n; st.earned += n; st.dirty = true;
-    fx('+' + n, x, y - 40, st.bz > 0 ? '#ff9a9a' : '#ffd84a', st.bz > 0 ? 18 : 15);
+  function earn(x, y) {                              // 몬스터 10마리마다 엽전 1개
+    if (st.kills % 10 !== 0) return;
+    var s = S(); if (s) s.coins += 1; st.earned += 1; st.dirty = true;
+    fx('엽전 +1', x, y - 40, '#ffd84a', 17); try { E('SFX').coin(4); } catch (_) {}
   }
   function hitMob(m, dmg) {
     if (m.dead) return;
@@ -1440,7 +1444,7 @@
     boom(m.x, m.y - m.r, '#ffffff', 4);
     if (m.hp <= 0) {
       m.dead = 0.001; st.kills++;
-      var info = MON[m.k]; earn(info.coin, m.x, m.y - m.r);
+      earn(m.x, m.y - m.r);
       boom(m.x, m.y - m.r, m.k === 'gold' ? '#ffd84a' : m.k === 'boss' ? '#ff5a5a' : '#f1d3a8', m.k === 'boss' ? 40 : 12);
       if (st.bz <= 0) { st.rage = Math.min(100, st.rage + (m.k === 'boss' ? 60 : 9)); if (st.rage >= 100) berserk(); }
       if (m.k === 'gold') { try { E('SFX').coin(10); } catch (_) {} }
@@ -1550,10 +1554,10 @@
   }
   function hud() {
     ov.querySelector('#bzEarn').textContent = st.earned;
-    ov.querySelector('#bzKill').textContent = st.kills;
+    ov.querySelector('#bzKill').textContent = st.kills + ' (다음 엽전까지 ' + (10 - st.kills % 10) + ')';
     var s = S(); ov.querySelector('#bzWallet').textContent = s ? s.coins : 0;
     ov.querySelector('.bzRage i').style.width = st.rage + '%';
-    ov.querySelector('.bzRage span').textContent = st.bz > 0 ? '광폭화! ' + Math.ceil(st.bz) + '초 (엽전 2배)' : '분노 ' + Math.floor(st.rage) + '%';
+    ov.querySelector('.bzRage span').textContent = st.bz > 0 ? '광폭화! ' + Math.ceil(st.bz) + '초' : '분노 ' + Math.floor(st.rage) + '%';
   }
   function tick(now) {
     if (!ov) return;
@@ -1566,7 +1570,7 @@
     var wrap = document.getElementById('wrap') || document.body;
     ov = document.createElement('div'); ov.id = 'bzOv';
     ov.innerHTML = '<div class="bzTop"><div class="bzPill">번 엽전 <b id="bzEarn">0</b></div><div class="bzPill">처치 <b id="bzKill">0</b></div><div class="bzPill">지갑 <b id="bzWallet">0</b></div><button class="bzX">✕</button></div>' +
-      '<div class="bzRage"><i></i><span></span></div><canvas id="bzCv"></canvas><div class="bzNote">켜 두기만 하면 알아서 싸워요 · 분노가 차면 광폭화 · 50마리마다 보스</div>';
+      '<div class="bzRage"><i></i><span></span></div><canvas id="bzCv"></canvas><div class="bzNote">켜 두기만 하면 알아서 싸워요 · 몬스터 10마리마다 엽전 1개 · 분노가 차면 광폭화 · 50마리마다 보스</div>';
     wrap.appendChild(ov);
     cv = ov.querySelector('#bzCv'); c = cv.getContext('2d');
     ov.querySelector('.bzX').onclick = close;
