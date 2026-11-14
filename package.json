@@ -1,0 +1,1 @@
+{"name":"gureumbal-ninja","version":"1.0.0","description":"구름발 닌자 게임 + 로그인/저장/랭킹 서버","main":"server.js","scripts":{"start":"node server.js"},"engines":{"node":">=18"},"license":"UNLICENSED","private":true}
