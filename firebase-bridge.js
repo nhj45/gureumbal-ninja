@@ -661,7 +661,7 @@
   }
   var waitId = setInterval(function () { if (document.getElementById('lId')) { clearInterval(waitId); fixIdField('lId'); } }, 200);
 
-  // ───────── 엽전 상점: 허리띠 색 · 칼 빛 · 부적 · 칭호 · 뽑기 · 오늘의 운세 ─────────
+  // ───────── 엽전 상점: 캐릭터 · 허리띠 색 · 칼 빛 · 부적 · 칭호 · 뽑기 · 오늘의 운세 ─────────
   var SCARVES = [
     { id: 'basic', name: '기본 빨강', price: 0, a: [230, 40, 40] },
     { id: 'blue', name: '시원한 파랑', price: 150, a: [60, 150, 255] },
@@ -697,8 +697,9 @@
   css4.textContent = [
     '#btnShop{display:flex;align-items:center;justify-content:center;padding:0;background:#ffd84a!important;margin-left:8px}',
     '#btnShop svg{width:26px;height:26px}',
-    '.shp-tabs{display:flex;gap:6px;margin-bottom:10px}',
-    '.shp-tabs button{flex:1;font:inherit;font-size:14px;padding:8px 4px;border:3px solid #141418;border-radius:12px;background:#f3ead8;color:#2b2b3a}',
+    '.shp-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}',
+    '.shp-tabs button{flex:1 1 30%;font:inherit;font-size:14px;padding:8px 4px;border:3px solid #141418;border-radius:12px;background:#f3ead8;color:#2b2b3a}',
+    '.shp-pv{width:54px;height:54px;object-fit:contain;flex:none;background:#fffaf0;border:3px solid #141418;border-radius:12px}',
     '.shp-tabs button.on{background:#2b3a6b;color:#fff}',
     '.shp-list{display:flex;flex-direction:column;gap:8px}',
     '.shp-it{display:flex;align-items:center;gap:10px;background:#f3ead8;border:3px solid #141418;border-radius:14px;padding:9px 10px;color:#2b2b3a}',
@@ -723,49 +724,94 @@
   function save2() { try { g('persist')(); g('refreshLobby')(); } catch (_) {} }
   var swatch = function (c) { return c === 'rainbow' ? 'conic-gradient(#ff4a4a,#ffd84a,#4fd27a,#4aa8ff,#b48cff,#ff4a4a)' : 'rgb(' + c.join(',') + ')'; };
 
-  // 허리띠 색: 닌자 그림의 빨간 허리띠 부분만 골라서 다른 색으로 칠해요
+  // 닌자 모습: 캐릭터(몸 · 머리띠 · 허리띠 색 + 이마 문양)와 허리띠 색을 그림에 직접 칠해요
+  var NINJAS = [
+    { id: 'basic', name: '검은 닌자', price: 0, d: '처음부터 함께한 하찮은 닌자' },
+    { id: 'snow', name: '눈송이 닌자', price: 300, body: [226, 232, 244], band: [120, 190, 255], belt: [60, 120, 230], em: 'snow', d: '눈처럼 하얀 수련복' },
+    { id: 'fire', name: '불꽃 닌자', price: 300, body: [196, 48, 52], band: [255, 160, 60], belt: [255, 214, 70], em: 'flame', d: '성격이 급해서 늘 먼저 뛰어요' },
+    { id: 'wave', name: '파도 닌자', price: 400, body: [44, 96, 186], band: [110, 220, 240], belt: [240, 248, 255], em: 'drop', d: '물 위도 걸을 수 있다고 우겨요' },
+    { id: 'bamboo', name: '대나무 닌자', price: 400, body: [46, 138, 74], band: [170, 230, 90], belt: [140, 90, 50], em: 'leaf', d: '대나무 숲에서 자란 닌자' },
+    { id: 'bolt', name: '번개 닌자', price: 600, body: [232, 176, 32], band: [60, 60, 70], belt: [140, 80, 220], em: 'bolt', d: '대시가 제일 빠를 것 같은 느낌' },
+    { id: 'sakura', name: '벚꽃 닌자', price: 600, body: [232, 122, 168], band: [255, 246, 250], belt: [220, 50, 80], em: 'flower', d: '지나간 자리에 꽃잎이 날려요(기분상)' },
+    { id: 'shadow', name: '그림자 닌자', price: 900, body: [80, 52, 132], band: [190, 150, 255], belt: [255, 205, 50], em: 'moon', d: '밤에만 진지해지는 닌자' },
+    { id: 'gold', name: '황금 닌자', price: 1500, body: [212, 160, 46], band: [255, 243, 176], belt: [200, 40, 50], em: 'crown', d: '엽전을 너무 많이 모아서 금이 됐어요' }
+  ];
   var sprOrig = null, sprCache = {};
   function hslRgb(hh) { var f = function (n) { var k = (n + hh / 30) % 12; return 255 * (0.6 - 0.45 * Math.max(-1, Math.min(k - 3, 9 - k, 1))); }; return [f(0), f(8), f(4)].map(Math.round); }
-  function tintImg(img, rgb) {
+  function drawEmblem(x, kind, cx, cy, r) {
+    x.save(); x.translate(cx, cy); x.lineJoin = 'round'; x.lineCap = 'round'; x.lineWidth = Math.max(2, r * 0.22); x.strokeStyle = '#141418';
+    var P2 = function (pts, fill) { x.beginPath(); pts.forEach(function (p, i) { i ? x.lineTo(p[0] * r, p[1] * r) : x.moveTo(p[0] * r, p[1] * r); }); x.closePath(); x.fillStyle = fill; x.fill(); x.stroke(); };
+    if (kind === 'snow') { x.strokeStyle = '#ffffff'; x.lineWidth = r * 0.28; for (var a = 0; a < 3; a++) { x.rotate(Math.PI / 3); x.beginPath(); x.moveTo(-r, 0); x.lineTo(r, 0); x.stroke(); } x.strokeStyle = '#141418'; x.lineWidth = r * 0.1; for (var a2 = 0; a2 < 3; a2++) { x.rotate(Math.PI / 3); x.beginPath(); x.moveTo(-r, 0); x.lineTo(r, 0); x.stroke(); } }
+    else if (kind === 'flame') P2([[0, -1.25], [0.55, -0.35], [0.75, 0.35], [0, 1], [-0.75, 0.35], [-0.5, -0.4], [-0.15, -0.05]], '#ffcf3a');
+    else if (kind === 'drop') P2([[0, -1.2], [0.7, 0.2], [0.55, 0.75], [0, 1], [-0.55, 0.75], [-0.7, 0.2]], '#5fd3ff');
+    else if (kind === 'leaf') { P2([[0, -1.1], [0.75, -0.2], [0.45, 0.7], [0, 1], [-0.45, 0.7], [-0.75, -0.2]], '#5cc451'); x.beginPath(); x.moveTo(0, -0.8 * r); x.lineTo(0, 0.9 * r); x.lineWidth = r * 0.12; x.stroke(); }
+    else if (kind === 'bolt') P2([[0.25, -1.2], [-0.6, 0.15], [-0.05, 0.15], [-0.3, 1.2], [0.65, -0.2], [0.1, -0.2]], '#ffe14a');
+    else if (kind === 'flower') { for (var k2 = 0; k2 < 5; k2++) { var an = k2 * 2 * Math.PI / 5; x.beginPath(); x.arc(Math.cos(an) * r * 0.55, Math.sin(an) * r * 0.55, r * 0.5, 0, 7); x.fillStyle = '#ffb6d5'; x.fill(); x.stroke(); } x.beginPath(); x.arc(0, 0, r * 0.35, 0, 7); x.fillStyle = '#ffd84a'; x.fill(); x.stroke(); }
+    else if (kind === 'moon') { x.beginPath(); x.arc(0, 0, r, 0, 7); x.fillStyle = '#ffe680'; x.fill(); x.stroke(); x.beginPath(); x.arc(r * 0.45, -r * 0.25, r * 0.85, 0, 7); x.fillStyle = 'rgb(190,150,255)'; x.fill(); }
+    else if (kind === 'crown') { x.translate(0, -r * 2.2); P2([[-1.3, 0.7], [-1.3, -0.5], [-0.65, 0.05], [0, -0.85], [0.65, 0.05], [1.3, -0.5], [1.3, 0.7]], '#ffd84a'); x.beginPath(); x.arc(0, 0.25 * r, r * 0.22, 0, 7); x.fillStyle = '#e8333a'; x.fill(); }
+    x.restore();
+  }
+  function tintImg(img, L) {
     return new Promise(function (res) {
       try {
         var c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
         var x = c.getContext('2d'); x.drawImage(img, 0, 0);
-        var d = x.getImageData(0, 0, c.width, c.height), p = d.data;
+        var d = x.getImageData(0, 0, c.width, c.height), p = d.data, W = c.width;
+        var bx0 = 1e9, by0 = 1e9, bx1 = -1, by1 = -1, rowN = {};
         for (var i = 0; i < p.length; i += 4) {
-          var r = p[i], gg = p[i + 1], b = p[i + 2];
-          if (p[i + 3] > 0 && r > 60 && r - gg > 45 && r - b > 45) {        // 빨간 허리띠 (테두리와 섞인 부분 포함)
-            var k = Math.min(1.15, r / 230), m = Math.min(1, (r - Math.max(gg, b)) / 150);
-            p[i] = Math.round(r * (1 - m) + rgb[0] * k * m); p[i + 1] = Math.round(gg * (1 - m) + rgb[1] * k * m); p[i + 2] = Math.round(b * (1 - m) + rgb[2] * k * m);
+          if (p[i + 3] === 0) continue;
+          var r = p[i], gg = p[i + 1], b = p[i + 2], mx = Math.max(r, gg, b), mn = Math.min(r, gg, b), lum = (r + gg + b) / 3;
+          if (r > 60 && r - gg > 45 && r - b > 45) {                       // 빨간 허리띠
+            if (L.belt) { var k = Math.min(1.15, r / 230), m = Math.min(1, (r - Math.max(gg, b)) / 150);
+              p[i] = Math.round(r * (1 - m) + L.belt[0] * k * m); p[i + 1] = Math.round(gg * (1 - m) + L.belt[1] * k * m); p[i + 2] = Math.round(b * (1 - m) + L.belt[2] * k * m); }
+          } else if (p[i + 3] > 200 && mx - mn < 24 && lum >= 120 && lum <= 200) {   // 회색 머리띠 (반투명 테두리는 빼고)
+            var py = (i / 4) / W | 0, px = (i / 4) % W;
+            if (py < c.height * 0.55) { rowN[py] = (rowN[py] || 0) + 1; if (rowN[py] === 25 && py < by0) by0 = py; if (px < bx0 && py > 30) bx0 = px; if (px > bx1) bx1 = px; if (py > by1) by1 = py; }
+            if (L.band) { var kb = lum / 160; p[i] = Math.min(255, L.band[0] * kb); p[i + 1] = Math.min(255, L.band[1] * kb); p[i + 2] = Math.min(255, L.band[2] * kb); }
+          } else if (L.body && p[i + 3] > 150 && mx - mn < 24 && lum > 24 && lum < 100) {   // 짙은 회색 몸 (검은 테두리는 그대로)
+            var t = Math.min(1, (lum - 24) / 14), kk = lum / 46;
+            p[i] = Math.round(r * (1 - t) + Math.min(255, L.body[0] * kk) * t); p[i + 1] = Math.round(gg * (1 - t) + Math.min(255, L.body[1] * kk) * t); p[i + 2] = Math.round(b * (1 - t) + Math.min(255, L.body[2] * kk) * t);
           }
         }
         x.putImageData(d, 0, 0);
+        if (L.em && bx1 > 0 && by0 < 1e9) {                                              // 이마 문양 (머리띠 앞쪽 = 그림의 왼쪽)
+          var ex = bx0 + (bx1 - bx0) * 0.3, ey = by0 + 17;
+          drawEmblem(x, L.em, ex, ey, 19);
+        }
         var out = new Image(); out.onload = function () { res(out); }; out.onerror = function () { res(img); }; out.src = c.toDataURL();
       } catch (_) { res(img); }
     });
   }
-  function getSet(key, rgb) {
+  function getSet(key, L) {
     if (sprCache[key]) return sprCache[key];
-    sprCache[key] = Promise.all(sprOrig.run.map(function (im) { return tintImg(im, rgb); }));
+    sprCache[key] = Promise.all(sprOrig.run.map(function (im) { return tintImg(im, L); }));
     return sprCache[key];
   }
-  var curBelt = 'basic', rainbowIdx = 0, beltBusy = false;
+  function lookOf(charId, beltId, rbIdx) {
+    var ch = NINJAS.find(function (x) { return x.id === charId; }) || NINJAS[0];
+    var bl = SCARVES.find(function (x) { return x.id === beltId; }) || SCARVES[0];
+    var belt = bl.id === 'rainbow' ? hslRgb(rbIdx * 30) : bl.id !== 'basic' ? bl.a : (ch.belt || null);
+    return { body: ch.body || null, band: ch.band || null, belt: belt, em: ch.em || null };
+  }
+  var curLookKey = 'basic|basic', rainbowIdx = 0, beltBusy = false;
   setInterval(function () {
     var SP = g('SPR'); if (!SP || !SP.run || !SP.run.every(function (im) { return im.complete && im.naturalWidth > 0; })) return;
     if (!sprOrig) sprOrig = { run: SP.run.slice() };
-    var id = S().cnScarf || 'basic';
     if (beltBusy) return;
-    if (id === 'rainbow') {
-      var key = 'rb' + rainbowIdx; beltBusy = true;
-      getSet(key, hslRgb(rainbowIdx * 30)).then(function (set) { SP.run = set; curBelt = 'rainbow'; rainbowIdx = (rainbowIdx + 1) % 12; beltBusy = false; });
-      return;
-    }
-    if (id === curBelt) return;
-    if (id === 'basic') { SP.run = sprOrig.run.slice(); curBelt = 'basic'; return; }
-    var sc = SCARVES.find(function (x) { return x.id === id; }); if (!sc) return;
+    var s = S(), cid = s.cnChar || 'basic', bid = s.cnScarf || 'basic', rb = bid === 'rainbow';
+    var key = cid + '|' + bid + (rb ? '|' + rainbowIdx : '');
+    if (key === curLookKey) return;
+    if (cid === 'basic' && bid === 'basic') { SP.run = sprOrig.run.slice(); curLookKey = key; return; }
     beltBusy = true;
-    getSet(id, sc.a).then(function (set) { SP.run = set; curBelt = id; beltBusy = false; });
+    getSet(key, lookOf(cid, bid, rainbowIdx)).then(function (set) { SP.run = set; curLookKey = key; if (rb) rainbowIdx = (rainbowIdx + 1) % 12; beltBusy = false; });
   }, 120);
+  var prevCache = {};
+  function charPreview(id) {                     // 상점에서 보여줄 작은 그림
+    if (prevCache[id]) return prevCache[id];
+    if (!sprOrig) return null;
+    prevCache[id] = tintImg(sprOrig.run[0], lookOf(id, 'basic', 0)).then(function (im) { prevCache[id] = im.src; document.querySelectorAll('img[data-prev="' + id + '"]').forEach(function (el) { el.src = im.src; }); return im.src; });
+    return null;
+  }
 
   // 칼 빛 바꾸기 (칼끝 궤적 색)
   var hookTrail = setInterval(function () {
@@ -822,7 +868,7 @@
   }, 300);
 
   // 상점 화면
-  var shopTab2 = 'scarf';
+  var shopTab2 = 'char';
   function priceBtn(item, kind, eq, own) {
     if (eq) return '<button class="shp-b on" disabled>쓰는 중</button>';
     if (own) return '<button class="shp-b own" data-eq="' + kind + ':' + item.id + '">쓰기</button>';
@@ -831,10 +877,16 @@
   }
   function openShop2(msg) {
     var s = S(), body = '';
-    var tabs = [['scarf', '허리띠'], ['trail', '칼 빛'], ['tool', '부적'], ['title', '칭호'], ['luck', '뽑기']];
+    var tabs = [['char', '캐릭터'], ['scarf', '허리띠'], ['trail', '칼 빛'], ['tool', '부적'], ['title', '칭호'], ['luck', '뽑기']];
     body += '<div class="shp-tabs">' + tabs.map(function (t) { return '<button data-stab="' + t[0] + '" class="' + (shopTab2 === t[0] ? 'on' : '') + '">' + t[1] + '</button>'; }).join('') + '</div>';
     if (msg) body += '<div class="note" style="margin:0 0 10px;color:#2f7fd6">' + msg + '</div>';
-    if (shopTab2 === 'scarf') {
+    if (shopTab2 === 'char') {
+      var oC = owned('char'), curC = s.cnChar || 'basic';
+      body += '<div class="shp-list">' + NINJAS.map(function (x) {
+        var own = oC.indexOf(x.id) >= 0, pv = x.id === 'basic' ? (sprOrig ? sprOrig.run[0].src : '') : charPreview(x.id);
+        return '<div class="shp-it' + (curC === x.id ? ' eq' : '') + '"><img class="shp-pv" data-prev="' + x.id + '" src="' + (typeof pv === 'string' ? pv : '') + '" alt=""><div class="shp-tx"><b>' + x.name + '</b><small>' + x.d + '</small></div>' + priceBtn(x, 'char', curC === x.id, own) + '</div>';
+      }).join('') + '</div><div class="shp-note">캐릭터는 모습만 바뀌어요. 허리띠 색을 따로 사면 그 색이 먼저 보여요.</div>';
+    } else if (shopTab2 === 'scarf') {
       var oS = owned('scarf'), cur = s.cnScarf || 'basic';
       body += '<div class="shp-list">' + SCARVES.map(function (x) { var own = oS.indexOf(x.id) >= 0; return '<div class="shp-it' + (cur === x.id ? ' eq' : '') + '"><span class="shp-sw" style="background:' + swatch(x.a) + '"></span><div class="shp-tx"><b>' + x.name + '</b><small>닌자 허리띠와 휘날리는 끈 색</small></div>' + priceBtn(x, 'scarf', cur === x.id, own) + '</div>'; }).join('') + '</div>';
     } else if (shopTab2 === 'trail') {
@@ -903,14 +955,14 @@
     }
     var kv = (b.dataset.buy || b.dataset.eq || '').split(':'), kind = kv[0], id = kv[1] == null ? '' : kv[1];
     if (!kind) return;
-    var list = kind === 'scarf' ? SCARVES : kind === 'trail' ? TRAILS : TITLES;
+    var list = kind === 'char' ? NINJAS : kind === 'scarf' ? SCARVES : kind === 'trail' ? TRAILS : TITLES;
     var item = list.find(function (x) { return x.id === id; }); if (!item) return;
-    var key = kind === 'scarf' ? 'cnScarf' : kind === 'trail' ? 'cnTrail' : 'cnTitle';
+    var key = kind === 'char' ? 'cnChar' : kind === 'scarf' ? 'cnScarf' : kind === 'trail' ? 'cnTrail' : 'cnTitle';
     if (b.dataset.buy) {
       if ((s.coins || 0) < item.price) return openShop2('엽전이 모자라요');
       s.coins -= item.price; owned(kind).push(id); s[key] = id; save2();
       try { g('SFX').buy(); g('vib')(25); } catch (_) {}
-      return openShop2(item.name + '을(를) 샀어요!');
+      return openShop2(item.name + (kind === 'char' ? '와 함께해요!' : '을(를) 샀어요!'));
     }
     s[key] = id; save2(); openShop2();
   });
