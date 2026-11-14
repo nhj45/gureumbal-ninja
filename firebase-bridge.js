@@ -216,7 +216,8 @@
         var msg = '이 계정은 관리자에 의해 정지됐어요' + (why ? ' (' + why + ')' : '');
         try { await g('logout')(); } catch (_) {}
         try { document.getElementById('lErr').textContent = msg; } catch (_) {}
-        popup(ICON_HORN, '계정 정지', [h(msg)]);
+        popQ = []; laterQ = []; var op = document.getElementById('cnPop'); if (op) op.remove();
+        var bp = popup(ICON_HORN, '계정 정지', [h(msg)]); if (bp) bp.dataset.keep = '1';
         return;
       }
       var gs = await x.F.getDocs(x.F.collection(x.db, 'users', u.uid, 'gifts'));
@@ -417,6 +418,7 @@
     document.body.appendChild(d);
     try { g('vib')(30); } catch (_) {}
     setTimeout(close, 14000);
+    return d;
   }
 
   var fmtLeft = function (ms) {
@@ -427,8 +429,9 @@
     return Math.max(1, m) + '분 남음';
   };
   function evActive() { var e = LIVE.event; return e && (!e.until || e.until > Date.now()) ? e : null; }
-  function evCoin() { var e = evActive(); return e && e.coin > 1 ? Math.min(10, e.coin) : 1; }
-  function evMission() { var e = evActive(); return e && e.mission > 1 ? Math.min(5, e.mission) : 1; }
+  function loggedIn() { return g('PROFILE') === '@server'; }   // 관리자 공지·메시지·이벤트·선물은 로그인한 사람에게만
+  function evCoin() { if (!loggedIn()) return 1; var e = evActive(); return e && e.coin > 1 ? Math.min(10, e.coin) : 1; }
+  function evMission() { if (!loggedIn()) return 1; var e = evActive(); return e && e.mission > 1 ? Math.min(5, e.mission) : 1; }
   function evText(e) {
     var p = [];
     if (e.coin > 1) p.push('엽전 ' + e.coin + '배');
@@ -438,14 +441,14 @@
 
   function renderLobbyLive() {
     var lobby = document.getElementById('lobby'); if (!lobby) return;
-    var top = lobby.querySelector('.topbar');
+    var top = lobby.querySelector('.topbar'), on = loggedIn();
     var n = document.getElementById('cnNotice');
-    if (LIVE.notice) {
+    if (on && LIVE.notice) {
       if (!n) { n = document.createElement('div'); n.id = 'cnNotice'; top.insertAdjacentElement('afterend', n); }
       n.innerHTML = '<b>공지</b>' + h(LIVE.notice);
     } else if (n) n.remove();
     var ev = evActive(), el = document.getElementById('cnEvent');
-    if (ev && evText(ev)) {
+    if (on && ev && evText(ev)) {
       if (!el) { el = document.createElement('div'); el.id = 'cnEvent'; (document.getElementById('cnNotice') || top).insertAdjacentElement('afterend', el); }
       el.innerHTML = '이벤트 진행 중! ' + h(ev.msg || '') + ' <b>' + evText(ev) + '</b>' + (ev.until ? '<small>' + fmtLeft(ev.until - Date.now()) + '</small>' : '');
     } else if (el) el.remove();
@@ -484,10 +487,12 @@
     popup(ICON_GIFT, '관리자 선물 도착!', lines.length ? lines : ['고마워요!']);
   }
 
+  var LASTLIVE = {};
   function onLive(d) {
-    var prevEv = LIVE.event;
+    LASTLIVE = d || {};
     LIVE = { notice: d.notice || '', bcast: d.bcast || null, event: d.event || null, gift: d.gift || null };
     renderLobbyLive();
+    if (!loggedIn()) return;                                   // 게스트·로그인 화면에서는 안 띄워요
     if (LIVE.notice && !seen('notice', LIVE.notice)) popup(ICON_HORN, '새 공지', [h(LIVE.notice)]);
     var bc = LIVE.bcast;
     if (bc && bc.text && (!bc.until || bc.until > Date.now()) && !seen('bc', bc.id)) {
@@ -502,6 +507,14 @@
     x.F.onSnapshot(x.F.doc(x.db, 'config', 'live'), function (s) { onLive(s.exists() ? s.data() : {}); }, function () {});
   }).catch(function () {});
   setInterval(tryClaimAllGift, 5000);
+  // 로그인하면 그동안 못 본 공지·메시지·이벤트·선물을 바로 보여주고, 로그아웃하면 로비에서 치워요
+  var wasIn = false;
+  setInterval(function () {
+    var now = loggedIn(); if (now === wasIn) return;
+    wasIn = now;
+    if (!now) { laterQ = []; popQ = []; var bd = document.getElementById('cnBand'); if (bd) bd.remove(); var pp = document.getElementById('cnPop'); if (pp && pp.dataset.keep !== '1') pp.remove(); }
+    onLive(LASTLIVE);
+  }, 800);
 
   // 접속 중 표시 (관리자 페이지에서 봐요)
   setInterval(function () {
