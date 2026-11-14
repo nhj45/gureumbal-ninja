@@ -251,7 +251,7 @@ let USERS = [], BANS = {}, PRES = {}, LIVED = {}, SEL = null;
 async function loadUsers() {
   const [us, bs] = await Promise.all([F.getDocs(F.query(F.collection(db, 'users'), F.orderBy('updated', 'desc'), F.limit(500))), F.getDocs(F.collection(db, 'bans'))]);
   BANS = {}; bs.docs.forEach(d => BANS[d.id] = d.data() || {});
-  USERS = us.docs.map(d => {
+  USERS = us.docs.filter(d => d.id !== auth.currentUser.uid && d.data().id !== '123eet7').map(d => {   // 관리자 자신은 빼요
     const v = d.data(); let sv = {}; try { sv = v.save ? JSON.parse(v.save) : {}; } catch (_) {}
     const best = sv.best || {};
     return { uid: d.id, id: v.id || '?', nick: v.nick || '닌자', coins: sv.coins || 0, tower: (sv.stats && sv.stats.tower) || 0, t: [0, 1, 2, 3, 4].map(i => best['s' + i] ? best['s' + i].time : null), updated: v.updated || 0, save: sv };
@@ -260,7 +260,7 @@ async function loadUsers() {
 }
 async function loadPresence() {
   const ps = await F.getDocs(F.query(F.collection(db, 'presence'), F.where('at', '>', Date.now() - 120000)));
-  PRES = {}; ps.docs.forEach(d => PRES[d.id] = d.data());
+  PRES = {}; ps.docs.forEach(d => { if (d.id !== auth.currentUser.uid && d.data().id !== '123eet7') PRES[d.id] = d.data(); });
   const list = Object.entries(PRES).sort((a, b) => b[1].at - a[1].at);
   $('onlineList').innerHTML = list.length ? list.map(([uid, p]) => `<span class="chip">${h(p.nick || p.id)} <small>@${h(p.id)} · ${p.where === 'play' ? '플레이 중' : '로비'}</small></span>`).join('') : '<span class="muted">지금은 아무도 없어요</span>';
   renderStats();
@@ -367,7 +367,7 @@ $('giftOff').addEventListener('click', async () => { await setLive({ gift: null 
 async function loadRank() {
   const b = $('rkBoard').value;
   const s = await F.getDocs(F.query(F.collection(db, 'ranks'), F.orderBy(b, b === 'tower' ? 'desc' : 'asc'), F.limit(50)));
-  const list = s.docs.map(d => ({ uid: d.id, ...d.data() })).filter(d => typeof d[b] === 'number');
+  const list = s.docs.map(d => ({ uid: d.id, ...d.data() })).filter(d => typeof d[b] === 'number' && d.uid !== auth.currentUser.uid);
   $('rkList').innerHTML = list.length ? list.map((d, i) => `<div><b>${i + 1}</b><span>${h(d.nick || '닌자')}</span><b>${b === 'tower' ? d[b] + 'm' : fmtT(d[b])}</b><button data-rkdel="${d.uid}">빼기</button></div>`).join('') : '<div class="muted">기록이 없어요</div>';
 }
 $('rkLoad').addEventListener('click', () => loadRank().catch(e => toast('실패했어요: ' + (e.code || e), true)));
