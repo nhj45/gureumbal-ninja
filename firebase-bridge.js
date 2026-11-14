@@ -1032,7 +1032,7 @@
         shout(pickL('s3'), true);
         evalg('(function () { var p = P; if (!p) return; var cx = p.x + p.w / 2, cy = p.y + p.h / 2 - 4;' +
           'ring(cx, cy, "rgba(255,255,255,.95)", 78, 0.32); ring(cx, cy, "rgba(255,216,74,.85)", 58, 0.26);' +
-          'for (var a = 0; a < 3; a++) { var an = a * 2.094 + time * 3; particles.push({ k: "cut", x: cx + Math.cos(an) * 34, y: cy + Math.sin(an) * 22, vx: 0, vy: 0, life: 0.22, max: 0.22, ang: an + 1.57, size: 110 }); }' +
+          'for (var a = 0; a < 3; a++) { var an = a * 2.094 + time * 3; particles.push({ k: "cut", x: cx + Math.cos(an) * 30, y: cy + Math.sin(an) * 18, vx: 0, vy: 0, life: 0.2, max: 0.2, ang: an + 1.57, size: 34 }); }' +
           'for (var i = 0; i < 16; i++) { var b = i / 16 * TAU; particles.push({ k: "streak", x: cx, y: cy, vx: Math.cos(b) * 320, vy: Math.sin(b) * 220, life: 0.24, max: 0.24, size: 1.8, col: i % 2 ? "#ffffff" : "#ffe27a" }); }' +
           'for (var e of enemies) if (!e.dead && Math.hypot(e.x + e.w / 2 - cx, e.y + e.h / 2 - cy) < 86) { e.dead = 0.001; tut.kills++; onKill(p, e.x + e.w / 2, e.y, e, "slash"); slashImpact(e, p, true); floatText(e.x + e.w / 2, e.y - 8, "세 칼 베기!", "#ffe14a", 16); }' +
           'if (boss && boss.active && !boss.dead && boss.lastSlash !== p.slashId && Math.hypot(boss.x + boss.w / 2 - cx, boss.y + boss.h / 2 - cy) < 110) { boss.lastSlash = p.slashId; bossHit(2, p); }' +
@@ -1043,6 +1043,33 @@
     SF.dash = function () {
       var r = oDash.apply(this, arguments);
       if (isNinjo()) shout(pickL('dash'), true);
+      return r;
+    };
+  }, 300);
+  // 칼 세 자루: 평소엔 등에 칼 두 자루를 메고, 벨 때는 세 자루가 함께 휘둘러져요
+  var hookDraw = setInterval(function () {
+    var orig = g('drawSpriteNinja'); if (typeof orig !== 'function') return;
+    clearInterval(hookDraw);
+    window.drawSpriteNinja = function (gc, sk, o) {
+      var SK = g('SKINS'), SP = g('SPR');
+      var mine = isNinjo() && SK && sk === SK[0] && SP && SP.katana && SP.katana.complete && SP.katana.naturalWidth > 0 && SP.run[0].naturalWidth > 0;
+      if (!mine) return orig.apply(this, arguments);
+      var s = o.s || 1, k = (g('SPR_H') * s) / 320, h = SP.run[0].naturalHeight * k, ww = SP.run[0].naturalWidth * k;
+      var kw = 34 * s, kh = kw * SP.katana.naturalHeight / SP.katana.naturalWidth;
+      var base = function () { gc.save(); gc.translate(o.x, o.y); if (o.alpha != null) gc.globalAlpha = o.alpha; if (o.rot) { gc.translate(0, -h * 0.4); gc.rotate(o.rot); gc.translate(0, h * 0.4); } gc.rotate((o.lean || 0) * (o.face || 1)); gc.scale((o.sx || 1) * -(o.face || 1), o.sy || 1); gc.scale(-1, 1); };
+      var slashing = o.slash != null && !((o.throwT || 0) > 0);
+      if (!slashing) {                                      // 등에 멘 두 자루 (몸 뒤에 먼저 그려요)
+        base();
+        [[-1.95, 0.5, -0.2], [-2.3, 0.46, -0.27]].forEach(function (q) { gc.save(); gc.translate(ww * q[2], -h * q[1]); gc.rotate(q[0]); gc.drawImage(SP.katana, -kw * 0.45, -kh / 2, kw * 1.2, kh * 1.2); gc.restore(); });
+        gc.restore();
+      }
+      var r = orig.apply(this, arguments);
+      if (slashing) {                                       // 벨 때: 원래 칼 + 두 자루 더
+        var sa = g('slashAngle'), kind = o.slashKind || 1, a0 = sa(o.slash, kind), kw2 = (kind === 3 ? 44 : 36) * s, kh2 = kw2 * SP.katana.naturalHeight / SP.katana.naturalWidth;
+        base();
+        [-0.5, 0.45].forEach(function (off) { gc.save(); gc.translate(ww * 0.3, -h * 0.4 + off * 8 * s); gc.rotate(a0 + off); gc.scale(-1, 1); gc.drawImage(SP.katana, -kw2 * 0.74, -kh2 / 2, kw2, kh2); gc.restore(); });
+        gc.restore();
+      }
       return r;
     };
   }, 300);
