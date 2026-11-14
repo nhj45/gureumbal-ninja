@@ -411,7 +411,7 @@
   var popQ = [], laterQ = [];
   // 플레이 중이면 띠만 보이고, 큰 창은 판이 끝나면(로비·결과 화면) 바로 띄워요
   function tellPlayer(icon, title, lines) {
-    if (g('mode') === 'play') { laterQ.push([icon, title, lines]); miniBand(title + ' ' + lines.join(' ').replace(/<[^>]+>/g, '')); }
+    if (g('mode') === 'play') { laterQ.push([icon, title, lines]); miniBand(title.replace(/^관리자\s*/, '') + ' ' + lines.join(' ').replace(/<[^>]+>/g, '')); }
     else popup(icon, title, lines);
   }
   setInterval(function () {
@@ -509,7 +509,7 @@
     if (LIVE.notice && !seen('notice', LIVE.notice)) popup(ICON_HORN, '새 공지', [h(LIVE.notice)]);
     var bc = LIVE.bcast;
     if (bc && bc.text && (!bc.until || bc.until > Date.now()) && !seen('bc', bc.id)) {
-      showBand(bc.text);
+      if (g('mode') !== 'play') showBand(bc.text);            // 플레이 중이면 tellPlayer가 띠를 한 번만 띄워요
       tellPlayer(ICON_HORN, '관리자 메시지', [h(bc.text)]);
     }
     var ev = evActive();
