@@ -1102,3 +1102,31 @@
     });
   };
 })();
+
+// ── PC: 모바일 버튼 숨기고 키보드 안내 ──
+(function () {
+  function init() {
+    var st = document.createElement('style');
+    st.textContent = 'body.pcMode #ctrl{display:none!important}' +
+      '#pcKeys{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:3;pointer-events:none;white-space:nowrap;' +
+      'font:12px/1.4 sans-serif;color:#fff;background:rgba(5,8,18,.55);padding:5px 12px;border-radius:12px;opacity:.85}' +
+      '#pcKeys b{color:#ffe27a;font-weight:bold}';
+    document.head.appendChild(st);
+    var pc = false;
+    try { pc = matchMedia('(hover: hover) and (pointer: fine)').matches; } catch (_) {}
+    if (!pc) return;
+    document.body.classList.add('pcMode');
+    var wrap = document.getElementById('wrap') || document.body;
+    var hint = document.createElement('div'); hint.id = 'pcKeys';
+    hint.innerHTML = '<b>←→</b>/<b>AD</b> 이동 · <b>Space</b> 점프 · <b>Shift</b>/<b>X</b> 대시 · <b>C</b> 베기 · <b>P</b> 일시정지';
+    hint.style.display = 'none'; wrap.appendChild(hint);
+    var ctrl = document.getElementById('ctrl');
+    setInterval(function () {
+      var playing = ctrl && !ctrl.classList.contains('hide') && document.body.classList.contains('pcMode');
+      hint.style.display = playing ? '' : 'none';
+    }, 300);
+    // 터치하면 다시 모바일 버튼 보이기 (터치 노트북 등)
+    addEventListener('touchstart', function () { document.body.classList.remove('pcMode'); hint.style.display = 'none'; }, { passive: true, once: true });
+  }
+  var waitPc = setInterval(function () { if (document.body && document.getElementById('ctrl')) { clearInterval(waitPc); init(); } }, 200);
+})();
