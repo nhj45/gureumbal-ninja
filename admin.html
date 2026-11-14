@@ -80,7 +80,7 @@ pre{background:#0b0e19;border:1px solid var(--line);border-radius:8px;padding:10
     <h2>관리자 로그인</h2>
     <p class="muted" style="margin:0;text-align:center">게임에 가입한 관리자 아이디와 비밀번호로 로그인해요</p>
     <input id="lid" placeholder="아이디" autocomplete="username" required>
-    <input id="lpw" type="password" placeholder="비밀번호" autocomplete="current-password" required>
+    <div style="position:relative"><input id="lpw" type="password" placeholder="비밀번호" autocomplete="current-password" required style="width:100%;padding-right:64px"><button type="button" id="pwEye" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);padding:4px 10px;font-size:12px">보이기</button></div>
     <button class="primary" type="submit">로그인</button>
     <div class="err" id="lerr"></div>
   </form>
@@ -206,6 +206,7 @@ $('loginBox').addEventListener('submit', async e => {
   $('lpw').value = '';
 });
 $('logoutBtn').addEventListener('click', () => A.signOut(auth));
+$('pwEye').addEventListener('click', () => { const show = $('lpw').type === 'password'; $('lpw').type = show ? 'text' : 'password'; $('pwEye').textContent = show ? '숨기기' : '보이기'; });
 let started = false, timers = [];
 A.onAuthStateChanged(auth, async u => {
   timers.forEach(clearInterval); timers = [];
