@@ -96,7 +96,7 @@ pre{background:#0b0e19;border:1px solid var(--line);border-radius:8px;padding:10
         <p class="muted" style="margin:0 0 6px">게임 로비 위쪽에 떠요. 비우고 저장하면 공지가 없어져요.</p>
         <textarea id="noticeTxt" rows="2" maxlength="120" style="width:100%" placeholder="예: 오늘 밤 10시에 점검이 있어요"></textarea>
         <div class="actions"><button id="noticeBtn" class="primary">공지 저장</button></div>
-        <div style="margin-top:14px"><b>화면 메시지</b> <span class="muted">게임을 켜 둔 모두의 화면 위에 흐르는 띠 + 큰 창으로 한 번 보여요</span></div>
+        <div style="margin-top:14px"><b>화면 메시지</b> <span class="muted">게임을 켜 둔 모두의 화면에 바로 흐르는 띠 + 큰 창으로 보여요 (플레이 중이면 판이 끝나자마자 창)</span></div>
         <div class="bar" style="margin-top:6px"><input id="bcTxt" maxlength="80" placeholder="예: 10분 뒤 점검! 판을 마무리해 주세요"><select id="bcH"><option value="1">1시간</option><option value="6">6시간</option><option value="24" selected>하루</option><option value="72">3일</option></select></div>
         <div class="actions"><button id="bcBtn" class="primary">보내기</button><button id="bcOff">끄기</button></div>
         <div class="now" id="bcNow">-</div>
@@ -150,6 +150,11 @@ pre{background:#0b0e19;border:1px solid var(--line);border-radius:8px;padding:10
           <div class="bar"><input id="dCoin" type="number" min="1" max="1000000" placeholder="개수"><input id="dCoinMsg" maxlength="40" placeholder="메시지 (선택)"></div>
           <div class="actions"><button data-add="100">+100</button><button data-add="500">+500</button><button data-add="1000">+1000</button><button id="dGive" class="primary">보내기</button></div>
           <div class="muted" style="margin-top:6px;font-size:12px">게임을 켜 두고 있으면 20초 안에, 아니면 다음 접속 때 들어가요.</div>
+        </fieldset>
+        <fieldset><legend>메시지 보내기</legend>
+          <div class="bar"><input id="dMsg" maxlength="80" placeholder="이 사람에게만 보낼 메시지"></div>
+          <div class="actions"><button id="dMsgBtn" class="primary">보내기</button></div>
+          <div class="muted" style="margin-top:6px;font-size:12px">게임을 켜 두고 있으면 바로 "관리자 메시지" 창이 떠요 (플레이 중이면 위쪽 띠 + 판이 끝나자마자 창).</div>
         </fieldset>
         <fieldset><legend>정지</legend>
           <div class="bar"><input id="dReason" maxlength="40" placeholder="사유 (선택, 본인에게 보여요)"></div>
@@ -269,6 +274,13 @@ $('dGive').addEventListener('click', async () => {
   try { await F.addDoc(F.collection(db, 'users', u.uid, 'gifts'), { coins: n, msg: $('dCoinMsg').value.trim(), at: Date.now(), by: auth.currentUser.uid }); $('dCoin').value = ''; $('dCoinMsg').value = ''; toast(`${u.nick}에게 엽전 ${n}개를 보냈어요`); }
   catch (e) { toast('실패했어요: ' + (e.code || e), true); }
 });
+$('dMsgBtn').addEventListener('click', async () => {
+  const t = $('dMsg').value.trim(); const u = USERS.find(x => x.uid === SEL);
+  if (!u || !t) return toast('보낼 메시지를 적어주세요', true);
+  try { await F.addDoc(F.collection(db, 'users', u.uid, 'gifts'), { coins: 0, msg: t, at: Date.now(), by: auth.currentUser.uid }); $('dMsg').value = ''; toast(u.nick + '에게 메시지를 보냈어요'); }
+  catch (e) { toast('실패했어요: ' + (e.code || e), true); }
+});
+$('dMsg').addEventListener('keydown', e => { if (e.key === 'Enter') $('dMsgBtn').click(); });
 $('dBan').addEventListener('click', async () => {
   const u = USERS.find(x => x.uid === SEL); if (!u) return;
   if (u.uid === auth.currentUser.uid) return toast('자기 자신은 정지할 수 없어요', true);
