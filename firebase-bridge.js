@@ -1965,3 +1965,16 @@
     };
   }, 300);
 })();
+
+// ── 맵의 유령 몬스터 없애기 ──
+(function () {
+  var E = function (s) { return (0, eval)(s); };
+  function clean() {
+    try { var en = E('enemies'); if (en) for (var i = en.length - 1; i >= 0; i--) if (en[i] && en[i].k === 'ghost') en.splice(i, 1); } catch (_) {}
+  }
+  var hook = setInterval(function () {
+    var f; try { f = E('loadStage'); } catch (_) { return; } if (typeof f !== 'function') return; clearInterval(hook);
+    window.loadStage = function () { var r = f.apply(this, arguments); clean(); return r; };
+  }, 300);
+  (function tick() { clean(); requestAnimationFrame(tick); })();   // 무한의 탑처럼 나중에 생기는 것도 바로 지워요
+})();
