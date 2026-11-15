@@ -730,7 +730,7 @@
   css4.textContent = [
     '#btnShop{display:flex;align-items:center;justify-content:center;padding:0;background:#ffd84a!important;margin-left:8px}',
     '#btnShop svg{width:26px;height:26px}',
-    '.shp-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}',
+    '.shp-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}',
     '.shp-tabs button{min-width:0;white-space:nowrap;font:inherit;font-size:14px;padding:8px 4px;border:3px solid #141418;border-radius:12px;background:#f3ead8;color:#2b2b3a}',
     '.shp-pv{width:54px;height:54px;object-fit:contain;flex:none;background:#fffaf0;border:3px solid #141418;border-radius:12px}',
     '.shp-tabs button.on{background:#2b3a6b;color:#fff}',
@@ -931,7 +931,8 @@
   }
   function openShop2(msg) {
     var s = S(), body = '';
-    var tabs = [['char', '캐릭터'], ['scarf', '허리띠'], ['trail', '칼 빛'], ['tool', '부적'], ['title', '칭호'], ['statue', '동상'], ['luck', '뽑기']];
+    var tabs = [['char', '캐릭터'], ['scarf', '허리띠'], ['trail', '칼 빛'], ['tool', '부적'], ['title', '칭호'], ['statue', '동상']];
+    if (shopTab2 === 'luck') shopTab2 = 'char';                // 뽑기 탭은 없앴어요
     body += '<div class="shp-tabs">' + tabs.map(function (t) { return '<button data-stab="' + t[0] + '" class="' + (shopTab2 === t[0] ? 'on' : '') + '">' + t[1] + '</button>'; }).join('') + '</div>';
     if (msg) body += '<div class="note" style="margin:0 0 10px;color:#2f7fd6">' + msg + '</div>';
     if (shopTab2 === 'char') {
@@ -1017,7 +1018,7 @@
       popup(ICON_STAR, T.name + ' 동상이 세워졌어요!', ['로비에 가서 내 동상을 확인해 보세요']);
       return openShop2();
     }
-    if (b.dataset.gacha) return gacha();
+    if (b.dataset.gacha) return;
     if (b.dataset.fortune) return fortune();
     if (b.dataset.tool) {
       var tl = TOOLS.find(function (x) { return x.id === b.dataset.tool; }), it = inv();
