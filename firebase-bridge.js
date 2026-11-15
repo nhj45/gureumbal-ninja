@@ -2376,16 +2376,90 @@
         try { E('tone')(200, 0.3, 'square', 0.06, 300); } catch (_) {}
       }
     };
-    // 보스 뒤에 색깔 기운
+    // 보스마다 생김새가 달라요 (너구리 장군은 원래 그림)
+    function art(k, g, b, tm) {
+      var INK = E('INK'), TAU = 6.283, st = b.state, drumS = st === 'drum' ? Math.sin(b.drum * 22) : 0;
+      g.lineJoin = 'round';
+      function eyes(y, sp, r, angry) {
+        [-1, 1].forEach(function (d) {
+          g.beginPath(); g.ellipse(d * sp, y, r, r * 1.1, 0, 0, TAU); g.fillStyle = '#fff'; g.fill(); g.strokeStyle = INK; g.lineWidth = 2; g.stroke();
+          g.beginPath(); g.arc(d * sp + b.face * r * 0.35, y + 1, r * 0.48, 0, TAU); g.fillStyle = INK; g.fill();
+          if (angry) { g.beginPath(); g.moveTo(d * sp - d * r * 1.2, y - r * 1.4); g.lineTo(d * sp + d * r * 0.9, y - r * 0.7); g.lineWidth = 3; g.stroke(); }
+        });
+      }
+      if (k.name === '도토리 대장') {
+        // 커다란 도토리 몸통 + 모자 + 작은 팔
+        g.beginPath(); g.ellipse(0, -26, 28, 27, 0, 0, TAU); g.fillStyle = '#c47a35'; g.fill(); g.strokeStyle = INK; g.lineWidth = 2.5; g.stroke();
+        g.beginPath(); g.ellipse(-8, -34, 7, 12, -0.4, 0, TAU); g.fillStyle = 'rgba(255,255,255,.18)'; g.fill();
+        g.beginPath(); g.ellipse(0, -46, 32, 15, 0, Math.PI, TAU); g.lineTo(32, -44); g.quadraticCurveTo(0, -36, -32, -44); g.closePath(); g.fillStyle = '#6b4a2e'; g.fill(); g.stroke();
+        g.strokeStyle = 'rgba(30,20,10,.5)'; g.lineWidth = 1.4; for (var x = -24; x <= 24; x += 8) { g.beginPath(); g.moveTo(x - 4, -56); g.lineTo(x + 4, -42); g.stroke(); }
+        g.beginPath(); g.moveTo(0, -60); g.quadraticCurveTo(4, -70, 10, -71); g.strokeStyle = INK; g.lineWidth = 3.5; g.stroke();
+        eyes(-28, 10, 6, true);
+        g.beginPath(); g.arc(0, -13, 6, Math.PI * 1.15, Math.PI * 1.85); g.strokeStyle = INK; g.lineWidth = 2.5; g.stroke();
+        var arm = st === 'throw' ? -18 : 0;
+        g.fillStyle = '#c47a35'; g.strokeStyle = INK; g.lineWidth = 2;
+        g.beginPath(); g.ellipse(-29, -22 + arm, 6, 5, 0, 0, TAU); g.fill(); g.stroke(); g.beginPath(); g.ellipse(29, -22 + arm, 6, 5, 0, 0, TAU); g.fill(); g.stroke();
+        g.fillStyle = '#6b4a2e'; g.beginPath(); g.ellipse(-11, -1, 8, 4, 0, 0, TAU); g.ellipse(11, -1, 8, 4, 0, 0, TAU); g.fill(); g.stroke();
+      } else if (k.name === '점프 대왕') {
+        // 왕관 쓴 개구리
+        var crouch = b.ground ? 1 : 0.85;
+        g.save(); g.scale(1, crouch);
+        g.fillStyle = '#3fae5a'; g.strokeStyle = INK; g.lineWidth = 2.5;
+        g.beginPath(); g.ellipse(-24, -6, 13, 7, 0, 0, TAU); g.ellipse(24, -6, 13, 7, 0, 0, TAU); g.fill(); g.stroke();
+        g.beginPath(); g.ellipse(0, -20, 32, 21, 0, 0, TAU); g.fill(); g.stroke();
+        g.beginPath(); g.ellipse(0, -14, 20, 12, 0, 0, TAU); g.fillStyle = '#f2f0c8'; g.fill(); g.lineWidth = 1.5; g.stroke();
+        g.fillStyle = '#3fae5a'; g.lineWidth = 2.5; g.beginPath(); g.arc(-14, -38, 11, 0, TAU); g.arc(14, -38, 11, 0, TAU); g.fill(); g.stroke();
+        g.restore();
+        eyes(-38 * crouch, 14, 7, false);
+        g.beginPath(); g.moveTo(-16, -24); g.quadraticCurveTo(0, -16, 16, -24); g.strokeStyle = INK; g.lineWidth = 2.5; g.stroke();
+        g.fillStyle = 'rgba(255,120,120,.5)'; g.beginPath(); g.ellipse(-22, -26, 4, 2.5, 0, 0, TAU); g.ellipse(22, -26, 4, 2.5, 0, 0, TAU); g.fill();
+        var cy = -50 * crouch; g.beginPath(); g.moveTo(-14, cy); g.lineTo(-14, cy - 12); g.lineTo(-7, cy - 6); g.lineTo(0, cy - 15); g.lineTo(7, cy - 6); g.lineTo(14, cy - 12); g.lineTo(14, cy); g.closePath();
+        g.fillStyle = '#ffd23f'; g.fill(); g.strokeStyle = INK; g.lineWidth = 2; g.stroke();
+        g.fillStyle = '#e74c3c'; g.beginPath(); g.arc(0, cy - 5, 2.5, 0, TAU); g.fill();
+      } else {
+        // 북치기 대마왕: 뿔 달린 도깨비 + 배에 큰 북
+        g.fillStyle = '#7d4fd1'; g.strokeStyle = INK; g.lineWidth = 2.5;
+        g.beginPath(); g.ellipse(-12, -4, 8, 6, 0, 0, TAU); g.ellipse(12, -4, 8, 6, 0, 0, TAU); g.fill(); g.stroke();
+        g.beginPath(); g.moveTo(-26, -8); g.quadraticCurveTo(-30, -48, 0, -54); g.quadraticCurveTo(30, -48, 26, -8); g.closePath(); g.fill(); g.stroke();
+        g.fillStyle = '#f5e6c8'; [-1, 1].forEach(function (d) { g.beginPath(); g.moveTo(d * 10, -50); g.quadraticCurveTo(d * 22, -66, d * 16, -74); g.quadraticCurveTo(d * 14, -62, d * 4, -53); g.closePath(); g.fill(); g.stroke(); });
+        g.fillStyle = '#ffde59'; g.beginPath(); g.ellipse(-12, -40, 6, 6.5, 0, 0, TAU); g.ellipse(12, -40, 6, 6.5, 0, 0, TAU); g.fill(); g.stroke();
+        g.fillStyle = INK; g.beginPath(); g.arc(-12 + b.face * 2, -39, 2.8, 0, TAU); g.arc(12 + b.face * 2, -39, 2.8, 0, TAU); g.fill();
+        g.lineWidth = 3; g.beginPath(); g.moveTo(-20, -50); g.lineTo(-6, -45); g.moveTo(20, -50); g.lineTo(6, -45); g.stroke();
+        g.beginPath(); g.moveTo(-10, -30); g.quadraticCurveTo(0, -25, 10, -30); g.lineWidth = 2.5; g.stroke();
+        g.fillStyle = '#fff'; g.beginPath(); g.moveTo(-7, -29); g.lineTo(-5, -24); g.lineTo(-3, -28); g.moveTo(7, -29); g.lineTo(5, -24); g.lineTo(3, -28); g.fill();
+        // 북
+        g.beginPath(); g.ellipse(0, -15, 15, 10, 0, 0, TAU); g.fillStyle = '#c0392b'; g.fill(); g.lineWidth = 2; g.stroke();
+        g.beginPath(); g.ellipse(0, -17, 12, 6.5, 0, 0, TAU); g.fillStyle = '#f3dcb0'; g.fill(); g.stroke();
+        g.strokeStyle = '#ffd23f'; g.lineWidth = 1.5; g.beginPath(); g.ellipse(0, -15, 15, 10, 0, 0.3, Math.PI - 0.3); g.stroke();
+        // 북채 든 팔
+        g.strokeStyle = INK; g.lineWidth = 2.5;
+        [-1, 1].forEach(function (d, n) {
+          var up = st === 'drum' ? (n ? drumS : -drumS) * 8 : 0, hx = d * 22, hy = -26 + up;
+          g.fillStyle = '#7d4fd1'; g.beginPath(); g.ellipse(hx, hy, 5.5, 5, 0, 0, TAU); g.fill(); g.stroke();
+          g.beginPath(); g.moveTo(hx, hy); g.lineTo(hx - d * 14, hy + 6 - up * 0.6); g.lineWidth = 3; g.stroke();
+          g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(hx - d * 14, hy + 6 - up * 0.6, 3, 0, TAU); g.fill(); g.lineWidth = 1.5; g.stroke(); g.lineWidth = 2.5;
+        });
+      }
+    }
     window.drawBoss = function () {
+      var k = kind(), b = E('boss');
+      if (!k || !b || k.name === '너구리 장군') return db.apply(this, arguments);
       try {
-        var k = kind(), b = E('boss'), c = E('ctx'), tm = E('time');
-        if (k && b && !(b.dead > 0.8)) {
-          var bx = b.x + b.w / 2, by = b.y + b.h / 2, r = 70 + Math.sin(tm * 4) * 6, g = c.createRadialGradient(bx, by, 10, bx, by, r);
-          g.addColorStop(0, k.glow + '.55)'); g.addColorStop(1, k.glow + '0)'); c.save(); c.fillStyle = g; c.beginPath(); c.arc(bx, by, r, 0, 6.283); c.fill(); c.restore();
-        }
+        var c = E('ctx'), tm = E('time'), save = { waves: b.waves, acorns: b.acorns };
+        // 충격파·도토리는 원래 그림 그대로 쓰고, 몸통만 바꿔 그려요
+        var dead = b.dead; b.dead = 0.9; db.apply(this, arguments); b.dead = dead;
+        if (b.dead && b.dead > 0.8) return;
+        var bx = b.x + b.w / 2, fy = b.y + b.h, by = b.y + b.h / 2;
+        var r = 70 + Math.sin(tm * 4) * 6, gr = c.createRadialGradient(bx, by, 10, bx, by, r);
+        gr.addColorStop(0, k.glow + '.5)'); gr.addColorStop(1, k.glow + '0)'); c.save(); c.fillStyle = gr; c.beginPath(); c.arc(bx, by, r, 0, 6.283); c.fill(); c.restore();
+        c.save(); c.translate(bx, fy);
+        if (b.dead) { c.globalAlpha = Math.max(0, 1 - b.dead / 0.8); c.rotate(b.dead * 2 * b.face); }
+        var sq = b.state === 'drum' ? 1 + Math.sin(b.drum * 22) * 0.04 : b.ground ? 1 : 0.92;
+        c.scale(1.05 / Math.sqrt(sq), 1.05 * sq);
+        art(k, c, b, tm);
+        if (b.inv > 0 && Math.floor(tm * 30) % 2) { c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.55; c.fillStyle = '#fff'; c.beginPath(); c.ellipse(0, -28, 32, 30, 0, 0, 6.283); c.fill(); }
+        c.restore();
       } catch (_) {}
-      return db.apply(this, arguments);
     };
     // 체력바에 보스 이름과 색
     window.drawBossBar = function () {
