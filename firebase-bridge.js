@@ -1080,7 +1080,8 @@
     clearInterval(hookNinjo); SF.__ninjo = true;
     var oSlash = SF.slash, oDash = SF.dash;
     SF.slash = function (k) {
-      var r = oSlash.apply(this, arguments);
+      k = k || 1;                                          // 로비 닌자가 번호 없이 부르면 소리가 고장 나서 1로 맞춰요
+      var r = oSlash.call(this, k);
       if (!isNinjo()) return r;
       if (k === 3) {
         shout(pickL('s3'), true);
@@ -1656,6 +1657,7 @@
   var css = '#bootOv{position:fixed;inset:0;z-index:99999;background:#141a33;touch-action:none;user-select:none;transition:opacity .5s}' +
     '#bootOv canvas{position:absolute;inset:0;width:100%;height:100%}' +
     '#bootOv .bootWait{position:absolute;left:0;right:0;top:50%;text-align:center;color:#fff;font:16px sans-serif;opacity:.8}' +
+    '#bootOv .bootTap{font-size:17px;font-weight:bold;animation:bootP 1s ease-in-out infinite}@keyframes bootP{0%,100%{opacity:.45}50%{opacity:1}}' +
     '#bootOv .bootSkip{position:absolute;right:14px;top:calc(14px + env(safe-area-inset-top));padding:8px 14px;border-radius:16px;border:2px solid #fff6;background:#0006;color:#fff;font:bold 13px sans-serif;cursor:pointer;display:none}';
   var styled = false;
   function mount() {
@@ -1670,7 +1672,46 @@
     size(); addEventListener('resize', size);
   }
   function size() { if (!cv) return; dpr = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; }
-  function tone(f, d, ty, v, s) { try { E('tone')(f, d, ty || 'triangle', v || 0.05, s || 0); } catch (_) {} }
+  // ── 컷신 전용 소리 (게임 소리 설정을 따라요) ──
+  var A = null, MG = null, windN = null, windF = null, windG = null;
+  function sfxOn() { try { return E('save').sfx !== false; } catch (_) { return true; } }
+  function audio() {
+    if (!A) { try { A = new (window.AudioContext || window.webkitAudioContext)(); MG = A.createGain(); MG.gain.value = 0.9; MG.connect(A.destination); } catch (_) { A = null; } }
+    if (A && A.state === 'suspended') A.resume().catch(function () {});
+    return A;
+  }
+  function tone(f, d, ty, v, sl, dl) {
+    if (!A || !sfxOn()) return; var t = A.currentTime + (dl || 0), o = A.createOscillator(), g = A.createGain();
+    o.type = ty || 'triangle'; o.frequency.setValueAtTime(f, t); if (sl) o.frequency.exponentialRampToValueAtTime(Math.max(30, f + sl), t + d);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v || 0.05, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g); g.connect(MG); o.start(t); o.stop(t + d + 0.05);
+  }
+  function nbuf(d) { var n = Math.max(1, Math.floor(A.sampleRate * d)), b = A.createBuffer(1, n, A.sampleRate), x = b.getChannelData(0); for (var i = 0; i < n; i++) x[i] = Math.random() * 2 - 1; return b; }
+  function hiss(d, v, type, f0, f1, dl) {
+    if (!A || !sfxOn()) return; var t = A.currentTime + (dl || 0), s0 = A.createBufferSource(), fl = A.createBiquadFilter(), g = A.createGain();
+    s0.buffer = nbuf(d); fl.type = type || 'bandpass'; fl.frequency.setValueAtTime(f0, t); if (f1) fl.frequency.exponentialRampToValueAtTime(f1, t + d); fl.Q.value = 0.9;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + Math.min(0.05, d * 0.2)); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    s0.connect(fl); fl.connect(g); g.connect(MG); s0.start(t); s0.stop(t + d + 0.05);
+  }
+  function flute(f, d, dl) {                                // 피리 같은 소리 (떨림 포함)
+    if (!A || !sfxOn()) return; var t = A.currentTime + (dl || 0), o = A.createOscillator(), lfo = A.createOscillator(), lg = A.createGain(), g = A.createGain();
+    o.type = 'sine'; o.frequency.value = f; lfo.frequency.value = 5.5; lg.gain.value = f * 0.012; lfo.connect(lg); lg.connect(o.frequency);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.07, t + 0.06); g.gain.setValueAtTime(0.07, t + d * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g); g.connect(MG); o.start(t); lfo.start(t); o.stop(t + d + 0.05); lfo.stop(t + d + 0.05);
+    hiss(d * 0.6, 0.008, 'highpass', 3000, 0, dl);
+  }
+  function taiko(dl, v) { tone(95, 0.5, 'sine', v || 0.35, -55, dl); hiss(0.12, 0.12, 'lowpass', 900, 200, dl); }
+  function gong(dl) { [196, 247.5, 294, 392.5, 523].forEach(function (f, i) { tone(f * (1 + (i % 2) * 0.003), 2.4 - i * 0.25, 'sine', 0.05 - i * 0.006, 0, dl); }); }
+  function windStart() {
+    if (!A || !sfxOn() || windN) return;
+    windN = A.createBufferSource(); windN.buffer = nbuf(2); windN.loop = true; windF = A.createBiquadFilter(); windF.type = 'bandpass'; windF.frequency.value = 400; windF.Q.value = 0.6;
+    windG = A.createGain(); windG.gain.value = 0.0001; windN.connect(windF); windF.connect(windG); windG.connect(MG); windN.start();
+    windG.gain.exponentialRampToValueAtTime(0.035, A.currentTime + 0.8);
+  }
+  function windSet(v, f) { if (!windG) return; var t = A.currentTime; windG.gain.setTargetAtTime(Math.max(0.0001, v), t, 0.08); windF.frequency.setTargetAtTime(f, t, 0.1); }
+  function windStop() { if (!windN) return; try { windG.gain.setTargetAtTime(0.0001, A.currentTime, 0.15); var w0 = windN; setTimeout(function () { try { w0.stop(); } catch (_) {} }, 800); } catch (_) {} windN = null; windG = null; }
+  function bgmPause() { try { E('bgm').pause(); } catch (_) {} }
+  function bgmResume() { try { if (E('save').bgm && !document.hidden) E('bgm').play().catch(function () {}); } catch (_) {} }
   var CAP = [[0.4, 1.5, '저 높고 높은 구름 위에서…', 0], [3.05, 4.3, '쿠우우우웅——!!', 1], [4.4, 5.7, '하찮지만 진지한 닌자, 등장!', 0]];
   var END = 7.2, JUMP = 1.15, FALL0 = 1.35, HIT = 3.0, stars = [], clouds = [], dust = [], rocks = [], leaves = [], cracks = [], ghosts = [], lastGhost = 0;
   for (var i = 0; i < 70; i++) stars.push({ x: Math.random(), y: Math.random() * 0.7, r: Math.random() < 0.15 ? 1.6 : 0.9, p: Math.random() * 6 });
@@ -1682,8 +1723,10 @@
   var sfx = {};
   function once(k, fn) { if (!sfx[k]) { sfx[k] = 1; fn(); } }
   function boom() {
-    tone(60, 0.9, 'sawtooth', 0.13, -35); tone(130, 0.45, 'square', 0.08, -90); tone(45, 1.1, 'sine', 0.14, -15);
-    try { E('noise')(0.8, 0.2, 260); } catch (_) {}
+    tone(80, 1.4, 'sine', 0.55, -50); tone(46, 1.8, 'sine', 0.45, -14); tone(140, 0.35, 'square', 0.07, -100);
+    hiss(0.5, 0.45, 'lowpass', 2200, 120); hiss(1.6, 0.12, 'lowpass', 300, 60, 0.15);
+    for (var i = 0; i < 10; i++) hiss(0.04, 0.08, 'highpass', 2500 + Math.random() * 2000, 0, 0.15 + Math.random() * 0.9);
+    windStop();
     try { navigator.vibrate && navigator.vibrate([110, 40, 70, 30, 40]); } catch (_) {}
   }
   function bamboo(x, base, h, wdt, col, node, sway, leafy) {
@@ -1696,6 +1739,8 @@
   function frame(now) {
     if (done) return;
     var t = (now - t0) / 1000, cx = W * 0.5, GY = H * 0.74;
+    once('intro', function () { windStart(); taiko(0.05, 0.22); [[440, 0.35, 0.2], [523, 0.3, 0.55], [587, 0.3, 0.85], [659, 0.6, 1.15]].forEach(function (n) { flute(n[0], n[1] + 0.25, n[2]); }); });
+    if (t > HIT + 0.3) once('after', function () { flute(659, 0.5, 1.0); flute(784, 0.5, 1.35); flute(880, 0.9, 1.7); });
     var shake = t > HIT ? Math.pow(Math.max(0, 1 - (t - HIT) / 1.0), 1.5) : 0;
     // 카메라: 하늘에서 시작해 닌자를 따라 땅으로 내려와요 (pan 0 = 하늘, 1 = 땅)
     var pan = t < FALL0 ? 0 : t < HIT ? easeIn((t - FALL0) / (HIT - FALL0)) : 1;
@@ -1757,16 +1802,17 @@
     var ny, sc = 1.7, sy = 1, sxx = 1, st = 'idle', slash = null, cloudY = H * 0.46 - (t > FALL0 ? (Math.min(t, HIT) - FALL0) * H * 1.6 : 0);
     if (cloudY > -100) cloud(cx - 46, cloudY + 14, 2.1, 0.95);           // 처음 서 있던 구름
     if (t < JUMP) { ny = H * 0.46; }
-    else if (t < FALL0) { var hj = (t - JUMP) / (FALL0 - JUMP); ny = H * 0.46 - Math.sin(hj * Math.PI) * 40; st = 'jump'; once('hop', function () { tone(420, 0.15, 'square', 0.04, 300); }); }
+    else if (t < FALL0) { var hj = (t - JUMP) / (FALL0 - JUMP); ny = H * 0.46 - Math.sin(hj * Math.PI) * 40; st = 'jump'; once('hop', function () { tone(520, 0.14, 'triangle', 0.08, 380); hiss(0.25, 0.05, 'bandpass', 900, 2500); }); }
     else if (t < HIT) {
       var fp = (t - FALL0) / (HIT - FALL0); st = 'jump';
       ny = H * 0.46 + (GY - H * 0.46) * easeIn(Math.max(0, (fp - 0.55) / 0.45));
-      once('whistle', function () { tone(1600, 1.5, 'sine', 0.035, -1400); });
+      once('whistle', function () { tone(1700, 1.6, 'sine', 0.03, -1450); hiss(1.65, 0.12, 'bandpass', 500, 3500); });
+      windSet(0.03 + 0.12 * fp, 400 + 2200 * fp);
       if (now - lastGhost > 45) { lastGhost = now; ghosts.push({ y: ny, life: 0.25 }); }
     } else {
       ny = GY;
       sy = after < 0.1 ? 0.55 : after < 0.5 ? 0.55 + 0.45 * ease((after - 0.1) / 0.4) : 1; sxx = 2 - sy;
-      if (after > 1.2 && after < 1.6) { slash = (after - 1.2) / 0.4; once('pose', function () { try { E('SFX').slash(2); } catch (_) {} }); }
+      if (after > 1.2 && after < 1.6) { slash = (after - 1.2) / 0.4; once('pose', function () { hiss(0.22, 0.14, 'bandpass', 1500, 6000); tone(2600, 0.6, 'triangle', 0.035, 0, 0.05); tone(3900, 0.5, 'sine', 0.02, 0, 0.06); }); }
     }
     ghosts = ghosts.filter(function (g0) { g0.life -= dt; return g0.life > 0; });
     ghosts.forEach(function (g0) { c.save(); c.globalAlpha = g0.life * 1.6 * 0.5; try { E('drawNinja')(c, E('curLook')(), { x: cx, y: g0.y, s: sc, face: 1, st: 'jump', run: 0, t: t, idleT: t, sx: 1, sy: 1, vy: 1, lean: 0 }); } catch (_) {} c.restore(); });
@@ -1804,7 +1850,7 @@
     // 제목 (금빛이 스치고 지나가요)
     if (t > 5.6) {
       var tt = ease((t - 5.6) / 0.55), sc2 = 0.5 + 0.5 * tt + Math.sin(Math.min(1, (t - 5.6) / 0.55) * Math.PI) * 0.18;
-      once('title', function () { tone(523, 0.15, 'square', 0.05); setTimeout(function () { tone(659, 0.15, 'square', 0.05); }, 110); setTimeout(function () { tone(1047, 0.4, 'square', 0.05); }, 220); });
+      once('title', function () { taiko(0, 0.3); taiko(0.16, 0.3); taiko(0.32, 0.45); gong(0.32); [523, 659, 784, 1047].forEach(function (f, i) { tone(f, 0.35, 'triangle', 0.05, 0, 0.36 + i * 0.07); }); });
       var ty0 = H * 0.24, fs = Math.round(Math.min(60, W / 6.5));
       c.save(); c.translate(W / 2, ty0); c.scale(sc2, sc2); c.globalAlpha = tt; c.textAlign = 'center';
       c.font = '900 ' + fs + 'px sans-serif'; c.lineWidth = 10; c.strokeStyle = '#05070f';
@@ -1820,7 +1866,7 @@
     raf = requestAnimationFrame(frame);
   }
   function play() {
-    started = true; t0 = performance.now();
+    started = true; t0 = performance.now(); audio(); bgmPause();
     var w = ov.querySelector('.bootWait'); if (w) w.remove();
     ov.querySelector('.bootSkip').style.display = 'block';
     raf = requestAnimationFrame(frame);
@@ -1828,7 +1874,7 @@
   }
   function finish() {
     if (done) return; done = true; cancelAnimationFrame(raf);
-    if (started) { try { localStorage.setItem('cn_cut_seen', '1'); } catch (_) {} }
+    if (started) { try { localStorage.setItem('cn_cut_seen', '1'); } catch (_) {} windStop(); bgmResume(); }
     ov.style.opacity = '0'; ov.style.pointerEvents = 'none';
     setTimeout(function () { if (ov) ov.remove(); removeEventListener('resize', size); }, 550);
   }
@@ -1840,14 +1886,25 @@
     if (ok || Date.now() - tStart > 15000) {
       clearInterval(w8); ready = true;
       var seen = false; try { seen = localStorage.getItem('cn_cut_seen') === '1'; } catch (_) {}
-      if (seen) finish(); else setTimeout(play, 150);   // 컷신은 처음 한 번만 (설정에서 다시 볼 수 있어요)
+      if (seen) finish(); else askTap();                 // 컷신은 처음 한 번만 (설정에서 다시 볼 수 있어요)
     }
   }, 100);
+  // 소리는 화면을 한 번 눌러야 나올 수 있어서, 처음엔 "눌러서 시작"을 보여 줘요
+  function askTap() {
+    var w = ov.querySelector('.bootWait'); if (w) { w.innerHTML = '<div style="font-size:30px;font-weight:900;margin-bottom:10px">구름발 <span style="color:#3ddc84">닌자</span></div><div class="bootTap">화면을 눌러 시작 ▶</div>'; }
+    var go = function (e) {
+      if (started || done) return; if (e && e.type === 'keydown') { e.stopPropagation(); e.preventDefault(); }
+      ov.removeEventListener('pointerdown', go); removeEventListener('keydown', go, true);
+      audio(); try { E('unlockAudio')(); } catch (_) {} bgmPause();
+      play();
+    };
+    ov.addEventListener('pointerdown', go); addEventListener('keydown', go, true);
+  }
   window.__playCutscene = function () {
     if (ov && !done) return;
     if (ov) ov.remove();
     ov = null; done = false; started = false; sfx = {}; dust = []; rocks = []; leaves = []; ghosts = [];
-    mount(); play();
+    mount(); audio(); play();
   };
   var hookSet = setInterval(function () {
     var f; try { f = E('openSettings'); } catch (_) {} if (typeof f !== 'function') return; clearInterval(hookSet);
@@ -1857,7 +1914,7 @@
         var body = document.getElementById('sheetBody'), note = body && body.querySelector('.note');
         var row = document.createElement('div'); row.className = 'tog'; row.id = 'togCut';
         row.innerHTML = '시작 컷신 다시 보기 <span style="font-size:15px;color:#2b3a6b;font-weight:bold">▶ 보기</span>';
-        row.addEventListener('click', function () { try { E('SFX').click(); E('closeSheet')(); } catch (_) {} setTimeout(window.__playCutscene, 250); });
+        row.addEventListener('click', function () { try { E('SFX').click(); E('closeSheet')(); } catch (_) {} audio(); setTimeout(window.__playCutscene, 250); });
         if (note) body.insertBefore(row, note); else if (body) body.appendChild(row);
       } catch (_) {}
       return r;
