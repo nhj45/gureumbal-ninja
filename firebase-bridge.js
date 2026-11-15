@@ -1731,6 +1731,7 @@
     var w = ov.querySelector('.bootWait'); if (w) w.remove();
     ov.querySelector('.bootSkip').style.display = 'block';
     raf = requestAnimationFrame(frame);
+    setTimeout(finish, END * 1000 + 1500);                // 화면이 멈춰 있어도 꼭 끝나게
   }
   function finish() {
     if (done) return; done = true; cancelAnimationFrame(raf);
