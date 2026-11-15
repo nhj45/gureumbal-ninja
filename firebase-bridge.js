@@ -1657,8 +1657,9 @@
     '#bootOv canvas{position:absolute;inset:0;width:100%;height:100%}' +
     '#bootOv .bootWait{position:absolute;left:0;right:0;top:50%;text-align:center;color:#fff;font:16px sans-serif;opacity:.8}' +
     '#bootOv .bootSkip{position:absolute;right:14px;top:calc(14px + env(safe-area-inset-top));padding:8px 14px;border-radius:16px;border:2px solid #fff6;background:#0006;color:#fff;font:bold 13px sans-serif;cursor:pointer;display:none}';
+  var styled = false;
   function mount() {
-    var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+    if (!styled) { styled = true; var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }
     ov = document.createElement('div'); ov.id = 'bootOv';
     ov.innerHTML = '<canvas></canvas><div class="bootWait">닌자가 몸을 푸는 중…</div><button class="bootSkip">건너뛰기 ▶▶</button>';
     document.body.appendChild(ov);
@@ -1670,91 +1671,151 @@
   }
   function size() { if (!cv) return; dpr = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; }
   function tone(f, d, ty, v, s) { try { E('tone')(f, d, ty || 'triangle', v || 0.05, s || 0); } catch (_) {} }
-  var CAP = [[0.3, 1.6, '저 높고 높은 구름 위에서…', 0], [2.75, 4.0, '쿠우우웅——!!', 1], [4.0, 5.2, '하찮지만 진지한 닌자, 등장!', 0]];
-  var END = 6.4, FALL0 = 1.2, HIT = 2.6, clouds = [], dust = [], cracks = [];
-  for (var i = 0; i < 6; i++) clouds.push({ x: Math.random(), y: 0.15 + Math.random() * 0.35, s: 0.6 + Math.random() * 0.8, v: 0.01 + Math.random() * 0.02 });
-  for (var q = 0; q < 9; q++) { var ang = Math.PI + (q + 0.5) / 9 * Math.PI, pts = [[0, 0]], r0 = 0, aa = ang; for (var k = 0; k < 5; k++) { r0 += 14 + Math.random() * 22; aa += (Math.random() - 0.5) * 0.5; pts.push([Math.cos(aa) * r0, -Math.sin(aa) * r0 * 0.25]); } cracks.push(pts); }
+  var CAP = [[0.4, 1.5, '저 높고 높은 구름 위에서…', 0], [3.05, 4.3, '쿠우우우웅——!!', 1], [4.4, 5.7, '하찮지만 진지한 닌자, 등장!', 0]];
+  var END = 7.2, JUMP = 1.15, FALL0 = 1.35, HIT = 3.0, stars = [], clouds = [], dust = [], rocks = [], leaves = [], cracks = [], ghosts = [], lastGhost = 0;
+  for (var i = 0; i < 70; i++) stars.push({ x: Math.random(), y: Math.random() * 0.7, r: Math.random() < 0.15 ? 1.6 : 0.9, p: Math.random() * 6 });
+  for (var i2 = 0; i2 < 14; i2++) clouds.push({ x: Math.random() * 1.3 - 0.15, y: Math.random() * 1.6, s: 0.6 + Math.random() * 1.2, a: 0.18 + Math.random() * 0.3, d: 0.4 + Math.random() * 0.8 });
+  for (var q = 0; q < 11; q++) { var ang = Math.PI + (q + 0.5) / 11 * Math.PI, pts = [[0, 0]], r0 = 0, aa = ang; for (var k = 0; k < 6; k++) { r0 += 12 + Math.random() * 22; aa += (Math.random() - 0.5) * 0.6; pts.push([Math.cos(aa) * r0, -Math.sin(aa) * r0 * 0.22]); } cracks.push(pts); }
   function ease(x) { return x < 0 ? 0 : x > 1 ? 1 : 1 - Math.pow(1 - x, 3); }
-  function cloud(x, y, s, a) { c.save(); c.globalAlpha = a; c.fillStyle = '#ffffff'; c.beginPath(); c.arc(x, y, 18 * s, 0, 6.283); c.arc(x + 20 * s, y - 8 * s, 22 * s, 0, 6.283); c.arc(x + 42 * s, y, 18 * s, 0, 6.283); c.rect(x, y - 2 * s, 42 * s, 18 * s); c.fill(); c.restore(); }
+  function easeIn(x) { return x < 0 ? 0 : x > 1 ? 1 : x * x * x; }
+  function cloud(x, y, s, a, col) { c.save(); c.globalAlpha = a; c.fillStyle = col || '#ffffff'; c.beginPath(); c.arc(x, y, 18 * s, 0, 6.283); c.arc(x + 20 * s, y - 9 * s, 23 * s, 0, 6.283); c.arc(x + 44 * s, y, 18 * s, 0, 6.283); c.arc(x + 22 * s, y + 6 * s, 20 * s, 0, 6.283); c.fill(); c.restore(); }
   var sfx = {};
   function once(k, fn) { if (!sfx[k]) { sfx[k] = 1; fn(); } }
   function boom() {
-    tone(70, 0.7, 'sawtooth', 0.12, -40); tone(140, 0.4, 'square', 0.08, -90);
-    try { E('noise')(0.6, 0.18, 300); } catch (_) {}
-    try { navigator.vibrate && navigator.vibrate([90, 40, 60]); } catch (_) {}
+    tone(60, 0.9, 'sawtooth', 0.13, -35); tone(130, 0.45, 'square', 0.08, -90); tone(45, 1.1, 'sine', 0.14, -15);
+    try { E('noise')(0.8, 0.2, 260); } catch (_) {}
+    try { navigator.vibrate && navigator.vibrate([110, 40, 70, 30, 40]); } catch (_) {}
+  }
+  function bamboo(x, base, h, wdt, col, node, sway, leafy) {
+    c.save(); c.translate(x, base); c.rotate(sway);
+    c.fillStyle = col; c.fillRect(-wdt / 2, -h, wdt, h + 4);
+    c.fillStyle = node; for (var n = 1; n < 7; n++) c.fillRect(-wdt / 2 - 1, -h * n / 7, wdt + 2, 3);
+    if (leafy) { c.fillStyle = node; for (var l = 0; l < 4; l++) { var ly = -h * (0.55 + l * 0.12), dir = l % 2 ? 1 : -1; c.beginPath(); c.moveTo(0, ly); c.quadraticCurveTo(dir * wdt * 2.2, ly - 10, dir * wdt * 3.4, ly + 4); c.quadraticCurveTo(dir * wdt * 2, ly + 2, 0, ly); c.fill(); } }
+    c.restore();
   }
   function frame(now) {
     if (done) return;
-    var t = (now - t0) / 1000, gy = H * 0.72, cx = W * 0.5;
-    var shake = t > HIT ? Math.max(0, 1 - (t - HIT) / 0.9) : 0;
+    var t = (now - t0) / 1000, cx = W * 0.5, GY = H * 0.74;
+    var shake = t > HIT ? Math.pow(Math.max(0, 1 - (t - HIT) / 1.0), 1.5) : 0;
+    // 카메라: 하늘에서 시작해 닌자를 따라 땅으로 내려와요 (pan 0 = 하늘, 1 = 땅)
+    var pan = t < FALL0 ? 0 : t < HIT ? easeIn((t - FALL0) / (HIT - FALL0)) : 1;
+    var drop = (1 - pan) * H * 1.9;                       // 땅이 화면 아래로 얼마나 내려가 있는지
+    var gy = GY + drop;
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
-    c.translate((Math.random() - 0.5) * 22 * shake, (Math.random() - 0.5) * 22 * shake);
-    var sky = c.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#0f1530'); sky.addColorStop(1, '#3a4a7a');
-    c.fillStyle = sky; c.fillRect(-30, -30, W + 60, H + 60);
-    for (var s = 0; s < 40; s++) { c.globalAlpha = 0.3 + 0.3 * Math.sin(t * 2 + s); c.fillStyle = '#fff'; c.fillRect((s * 97) % W, (s * 53) % (H * 0.5), 2, 2); } c.globalAlpha = 1;
-    var ma = ease(t / 1.0); c.fillStyle = 'rgba(255,243,196,' + ma + ')'; c.shadowColor = '#fff3c4'; c.shadowBlur = 40 * ma; c.beginPath(); c.arc(W * 0.74, H * 0.2, Math.min(W, H) * 0.09, 0, 6.283); c.fill(); c.shadowBlur = 0;
-    clouds.forEach(function (k) { cloud(((k.x + t * k.v) % 1.2 - 0.1) * W, k.y * H, k.s, 0.25); });
-    var rise = ease(t / 1.1);
-    for (var b = 0; b < 14; b++) {                         // 대나무 (충격에 흔들려요)
-      var bx = (b + 0.5) / 14 * W + Math.sin(b * 3.1) * 12, bh = H * (0.45 + 0.35 * Math.abs(Math.sin(b * 1.7)));
-      var sway = shake * Math.sin(t * 40 + b) * 10 * (bx < cx ? -1 : 1);
-      c.save(); c.translate(bx, gy); c.rotate(sway * 0.01);
-      c.fillStyle = b % 2 ? '#1c2a3a' : '#22344a'; c.fillRect(-5, -bh * rise, 10, bh * rise + 10);
-      for (var n = 1; n < 5; n++) { c.fillStyle = '#0f1a26'; c.fillRect(-6, -bh * rise * n / 5, 12, 3); }
-      c.restore();
-    }
-    c.fillStyle = '#16202e'; c.fillRect(-30, gy, W + 60, H - gy + 30);
-    // 떨어지는 닌자
-    var st = 'idle', ny = gy, sc = 1.6, sy = 1, sxx = 1, show = false;
-    if (t >= FALL0 && t < HIT) {
-      show = true; var f = (t - FALL0) / (HIT - FALL0); f = f * f;
-      ny = -80 + (gy + 80) * f; sc = 0.7 + 0.9 * f; st = 'jump';
-      once('whistle', function () { tone(1400, 1.3, 'sine', 0.04, -1200); });
-      c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 2;               // 속도선
-      for (var L = 0; L < 10; L++) { var lx = cx + (L - 4.5) * 9 * sc, ly = ny - 30 * sc - (L % 3) * 14; c.beginPath(); c.moveTo(lx, ly - 30 - 60 * f); c.lineTo(lx, ly); c.stroke(); }
-    } else if (t >= HIT) {
-      show = true;
-      var after = t - HIT; sy = after < 0.12 ? 0.6 : after < 0.5 ? 0.6 + 0.4 * ease((after - 0.12) / 0.38) : 1; sxx = 2 - sy;
-      st = after < 1.3 ? 'idle' : 'idle';
+    c.translate((Math.random() - 0.5) * 26 * shake, (Math.random() - 0.5) * 20 * shake);
+    // 하늘
+    var sky = c.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#070b1e'); sky.addColorStop(0.55, '#1b2550'); sky.addColorStop(1, '#4a5a8e');
+    c.fillStyle = sky; c.fillRect(-40, -40, W + 80, H + 80);
+    stars.forEach(function (st0) { c.globalAlpha = (0.35 + 0.4 * Math.sin(t * 2.5 + st0.p)) * (1 - pan * 0.4); c.fillStyle = '#fff'; c.beginPath(); c.arc(st0.x * W, st0.y * H - drop * 0.05, st0.r, 0, 6.283); c.fill(); }); c.globalAlpha = 1;
+    // 달 (테두리 빛 + 무늬)
+    var mx = W * 0.76, my = H * 0.2 - drop * 0.08, mr = Math.min(W, H) * 0.1;
+    var halo = c.createRadialGradient(mx, my, mr * 0.8, mx, my, mr * 3); halo.addColorStop(0, 'rgba(255,240,190,.35)'); halo.addColorStop(1, 'rgba(255,240,190,0)');
+    c.fillStyle = halo; c.beginPath(); c.arc(mx, my, mr * 3, 0, 6.283); c.fill();
+    c.fillStyle = '#fff3c8'; c.beginPath(); c.arc(mx, my, mr, 0, 6.283); c.fill();
+    c.fillStyle = 'rgba(210,190,140,.35)'; [[-0.3, -0.2, 0.22], [0.25, 0.1, 0.16], [-0.05, 0.35, 0.12]].forEach(function (m) { c.beginPath(); c.arc(mx + m[0] * mr, my + m[1] * mr, m[2] * mr, 0, 6.283); c.fill(); });
+    // 멀리 있는 산 (천천히 올라와요)
+    var mtY = H * 0.78 + drop * 0.35;
+    c.fillStyle = '#1a2142'; c.beginPath(); c.moveTo(-40, mtY + 200); for (var m2 = 0; m2 <= 10; m2++) c.lineTo(m2 / 10 * (W + 80) - 40, mtY - 70 - Math.abs(Math.sin(m2 * 1.3)) * 90); c.lineTo(W + 40, mtY + 200); c.fill();
+    // 구름: 떨어지는 동안 위로 휙휙 지나가요
+    var fallV = t < FALL0 ? 0 : (t < HIT ? pan : 1);
+    clouds.forEach(function (k) {
+      var yy = (k.y * H) - (t > FALL0 ? (Math.min(t, HIT) - FALL0) * H * 1.6 * k.d : 0) + Math.sin(t + k.x * 5) * 3;
+      if (yy < -80 || yy > H + 80) return; cloud(k.x * W, yy, k.s, k.a * (1 - Math.max(0, (t - HIT) * 0.6)));
+    });
+    // 바람 줄기 (떨어지는 중)
+    if (t > FALL0 && t < HIT) { c.strokeStyle = 'rgba(255,255,255,' + (0.15 + 0.35 * pan) + ')'; c.lineWidth = 1.5; for (var wl = 0; wl < 18; wl++) { var wx = ((wl * 137) % 100) / 100 * W, wy = ((wl * 71 + t * 1400) % (H + 200)) - 100; c.beginPath(); c.moveTo(wx, H - wy); c.lineTo(wx, H - wy - 40 - 90 * pan); c.stroke(); } }
+    // 대나무 숲 (뒤쪽, 앞쪽 두 겹)
+    for (var b = 0; b < 12; b++) { var bx = (b + 0.3) / 12 * W, bh = H * (0.5 + 0.3 * Math.abs(Math.sin(b * 2.3))); bamboo(bx, gy - H * 0.02, bh, 9, '#1a2838', '#101a26', shake * Math.sin(t * 38 + b) * 0.08 * (bx < cx ? -1 : 1), true); }
+    // 땅
+    var gg = c.createLinearGradient(0, gy, 0, gy + 120); gg.addColorStop(0, '#24314a'); gg.addColorStop(1, '#0e1422');
+    c.fillStyle = gg; c.fillRect(-40, gy, W + 80, H + 200); c.fillStyle = '#3a5a3a'; c.fillRect(-40, gy, W + 80, 5);
+    // 착지 뒤 효과 (갈라짐, 충격파, 먼지, 돌)
+    var after = t - HIT;
+    if (after >= 0) {
       once('boom', function () {
         boom();
-        for (var d = 0; d < 46; d++) { var a = Math.PI + Math.random() * Math.PI, sp = 120 + Math.random() * 380; dust.push({ x: cx, y: gy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6 - 80, life: 0.8 + Math.random() * 0.6, r: 3 + Math.random() * 6 }); }
+        for (var d = 0; d < 60; d++) { var a = Math.PI + Math.random() * Math.PI, sp = 140 + Math.random() * 420; dust.push({ x: cx + (Math.random() - 0.5) * 30, y: GY, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.5 - 60, life: 0.9 + Math.random() * 0.8, r: 4 + Math.random() * 9 }); }
+        for (var rk = 0; rk < 16; rk++) { var a2 = Math.PI * 1.15 + Math.random() * Math.PI * 0.7, sp2 = 260 + Math.random() * 360; rocks.push({ x: cx, y: GY - 4, vx: Math.cos(a2) * sp2, vy: Math.sin(a2) * sp2, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 20, s: 3 + Math.random() * 5, life: 1.6 }); }
+        for (var lf = 0; lf < 22; lf++) leaves.push({ x: Math.random() * W, y: -20 - Math.random() * H * 0.4, vx: (Math.random() - 0.5) * 40, vy: 40 + Math.random() * 60, rot: Math.random() * 6, ph: Math.random() * 6 });
       });
-      // 땅 갈라짐
-      var cr = Math.min(1, after / 0.25);
-      c.save(); c.translate(cx, gy + 3); c.strokeStyle = '#05080f'; c.lineWidth = 3; c.lineJoin = 'round';
-      cracks.forEach(function (pts) { c.beginPath(); c.moveTo(0, 0); var m = Math.max(1, Math.round(pts.length * cr)); for (var z = 1; z < m; z++) c.lineTo(pts[z][0] * 1.6, pts[z][1] * 1.6 + 6); c.stroke(); });
+      var cr = Math.min(1, after / 0.22);
+      c.save(); c.translate(cx, GY + 3); c.lineJoin = 'round';
+      cracks.forEach(function (pts) { var m = Math.max(1, Math.round(pts.length * cr)); c.beginPath(); c.moveTo(0, 0); for (var z = 1; z < m; z++) c.lineTo(pts[z][0] * 1.7, pts[z][1] * 1.7 + 6); c.strokeStyle = '#05080f'; c.lineWidth = 4; c.stroke(); c.strokeStyle = 'rgba(255,170,80,' + Math.max(0, 0.8 - after) + ')'; c.lineWidth = 1.5; c.stroke(); });
       c.restore();
-      // 충격파 고리
-      for (var w = 0; w < 3; w++) { var rt = after - w * 0.12; if (rt < 0 || rt > 0.9) continue; var rr2 = ease(rt / 0.9) * Math.max(W, H) * 0.7; c.globalAlpha = (1 - rt / 0.9) * 0.8; c.strokeStyle = w ? '#ffd84a' : '#ffffff'; c.lineWidth = 8 - w * 2; c.beginPath(); c.ellipse(cx, gy, rr2, rr2 * 0.28, 0, 0, 6.283); c.stroke(); }
+      var glow = c.createRadialGradient(cx, GY, 4, cx, GY, 160); glow.addColorStop(0, 'rgba(255,200,120,' + Math.max(0, 0.6 - after * 0.6) + ')'); glow.addColorStop(1, 'rgba(255,200,120,0)');
+      c.fillStyle = glow; c.beginPath(); c.ellipse(cx, GY, 160, 50, 0, 0, 6.283); c.fill();
+      for (var w = 0; w < 4; w++) { var rt = after - w * 0.1; if (rt < 0 || rt > 1) continue; var rr2 = ease(rt) * Math.max(W, H) * 0.75; c.globalAlpha = (1 - rt) * 0.85; c.strokeStyle = w % 2 ? '#ffd84a' : '#ffffff'; c.lineWidth = 9 - w * 2; c.beginPath(); c.ellipse(cx, GY, rr2, rr2 * 0.26, 0, 0, 6.283); c.stroke(); }
       c.globalAlpha = 1;
+      if (after < 0.35) { c.save(); c.globalAlpha = (1 - after / 0.35) * 0.7; c.strokeStyle = '#ffffff'; c.lineWidth = 2; for (var sl = 0; sl < 28; sl++) { var sa = sl / 28 * 6.283, r1 = 60 + after * 500, r2 = r1 + 80 + (sl % 3) * 40; c.beginPath(); c.moveTo(cx + Math.cos(sa) * r1, GY - 30 + Math.sin(sa) * r1); c.lineTo(cx + Math.cos(sa) * r2, GY - 30 + Math.sin(sa) * r2); c.stroke(); } c.restore(); }
     }
-    dust = dust.filter(function (d) { d.life -= 1 / 60; d.x += d.vx / 60; d.y += d.vy / 60; d.vy += 600 / 60; if (d.y > gy) { d.y = gy; d.vy *= -0.3; d.vx *= 0.7; } return d.life > 0; });
-    dust.forEach(function (d) { c.globalAlpha = Math.min(1, d.life); c.fillStyle = '#a8a4b8'; c.beginPath(); c.arc(d.x, d.y, d.r, 0, 6.283); c.fill(); }); c.globalAlpha = 1;
-    if (show) {
-      c.fillStyle = 'rgba(0,0,0,.35)'; c.beginPath(); c.ellipse(cx, gy + 2, 22 * Math.min(1.6, sc) / 1.6 * sxx, 5, 0, 0, 6.283); c.fill();
-      try { E('drawNinja')(c, E('curLook')(), { x: cx, y: ny, s: sc, face: 1, st: st, run: 0, t: t, idleT: t, sx: sxx, sy: sy, vy: st === 'jump' ? 1 : 0, lean: 0 }); } catch (_) {}
+    var dt = 1 / 60;
+    dust = dust.filter(function (d) { d.life -= dt; d.x += d.vx * dt; d.y += d.vy * dt; d.vx *= 0.97; d.vy += 300 * dt; if (d.y > GY) { d.y = GY; d.vy *= -0.2; } d.r += dt * 6; return d.life > 0; });
+    dust.forEach(function (d) { c.globalAlpha = Math.min(0.75, d.life * 0.6); c.fillStyle = '#b9b3c9'; c.beginPath(); c.arc(d.x, d.y, d.r, 0, 6.283); c.fill(); }); c.globalAlpha = 1;
+    rocks = rocks.filter(function (r) { r.life -= dt; r.x += r.vx * dt; r.y += r.vy * dt; r.vy += 900 * dt; r.rot += r.vr * dt; if (r.y > GY) { r.y = GY; r.vy *= -0.35; r.vx *= 0.6; r.vr *= 0.5; } return r.life > 0; });
+    rocks.forEach(function (r) { c.save(); c.translate(r.x, r.y); c.rotate(r.rot); c.fillStyle = '#4a4458'; c.strokeStyle = '#141418'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(-r.s, -r.s * 0.6); c.lineTo(r.s * 0.8, -r.s); c.lineTo(r.s, r.s * 0.5); c.lineTo(-r.s * 0.4, r.s); c.closePath(); c.fill(); c.stroke(); c.restore(); });
+    // 닌자
+    var ny, sc = 1.7, sy = 1, sxx = 1, st = 'idle', slash = null, cloudY = H * 0.46 - (t > FALL0 ? (Math.min(t, HIT) - FALL0) * H * 1.6 : 0);
+    if (cloudY > -100) cloud(cx - 46, cloudY + 14, 2.1, 0.95);           // 처음 서 있던 구름
+    if (t < JUMP) { ny = H * 0.46; }
+    else if (t < FALL0) { var hj = (t - JUMP) / (FALL0 - JUMP); ny = H * 0.46 - Math.sin(hj * Math.PI) * 40; st = 'jump'; once('hop', function () { tone(420, 0.15, 'square', 0.04, 300); }); }
+    else if (t < HIT) {
+      var fp = (t - FALL0) / (HIT - FALL0); st = 'jump';
+      ny = H * 0.46 + (GY - H * 0.46) * easeIn(Math.max(0, (fp - 0.55) / 0.45));
+      once('whistle', function () { tone(1600, 1.5, 'sine', 0.035, -1400); });
+      if (now - lastGhost > 45) { lastGhost = now; ghosts.push({ y: ny, life: 0.25 }); }
+    } else {
+      ny = GY;
+      sy = after < 0.1 ? 0.55 : after < 0.5 ? 0.55 + 0.45 * ease((after - 0.1) / 0.4) : 1; sxx = 2 - sy;
+      if (after > 1.2 && after < 1.6) { slash = (after - 1.2) / 0.4; once('pose', function () { try { E('SFX').slash(2); } catch (_) {} }); }
     }
-    if (t >= HIT && t < HIT + 0.18) { c.fillStyle = 'rgba(255,255,255,' + (1 - (t - HIT) / 0.18) * 0.85 + ')'; c.fillRect(-30, -30, W + 60, H + 60); }
-    CAP.forEach(function (k) {                             // 자막
+    ghosts = ghosts.filter(function (g0) { g0.life -= dt; return g0.life > 0; });
+    ghosts.forEach(function (g0) { c.save(); c.globalAlpha = g0.life * 1.6 * 0.5; try { E('drawNinja')(c, E('curLook')(), { x: cx, y: g0.y, s: sc, face: 1, st: 'jump', run: 0, t: t, idleT: t, sx: 1, sy: 1, vy: 1, lean: 0 }); } catch (_) {} c.restore(); });
+    c.fillStyle = 'rgba(0,0,0,.35)'; var shadowW = t < HIT ? 24 * Math.max(0.2, 1 - (GY - ny) / H) : 26 * sxx; c.beginPath(); c.ellipse(cx, t < FALL0 ? H * 0.46 + 3 : GY + 2, shadowW, 5, 0, 0, 6.283); if (t >= FALL0) c.fill();
+    try { E('drawNinja')(c, E('curLook')(), { x: cx, y: ny, s: sc, face: 1, st: st, run: 0, t: t, idleT: t, sx: sxx, sy: sy, vy: st === 'jump' ? 1 : 0, lean: 0, slash: slash, slashKind: 3 }); } catch (_) {}
+    if (slash !== null && slash < 1) { c.save(); c.globalAlpha = 1 - slash; c.fillStyle = '#ffffff'; var gx = cx + 40, gyy = GY - 70; c.beginPath(); c.moveTo(gx, gyy - 16); c.lineTo(gx + 3, gyy); c.lineTo(gx, gyy + 16); c.lineTo(gx - 3, gyy); c.closePath(); c.fill(); c.beginPath(); c.moveTo(gx - 16, gyy); c.lineTo(gx, gyy - 3); c.lineTo(gx + 16, gyy); c.lineTo(gx, gyy + 3); c.closePath(); c.fill(); c.restore(); }
+    // 떨어지는 대나무 잎
+    leaves = leaves.filter(function (l) { l.y += l.vy * dt; l.x += (l.vx + Math.sin(t * 3 + l.ph) * 30) * dt; l.rot += dt * 3; return l.y < H + 20; });
+    leaves.forEach(function (l) { c.save(); c.translate(l.x, l.y); c.rotate(l.rot); c.fillStyle = '#3f7a45'; c.beginPath(); c.ellipse(0, 0, 7, 2.5, 0, 0, 6.283); c.fill(); c.restore(); });
+    // 앞쪽 큰 대나무 (화면 양 끝, 살짝 흐리게)
+    bamboo(W * 0.04, gy + 40, H * 1.2, 22, '#0b111b', '#05080e', shake * Math.sin(t * 30) * 0.05, true);
+    bamboo(W * 0.97, gy + 40, H * 1.1, 26, '#0b111b', '#05080e', -shake * Math.sin(t * 30 + 1) * 0.05, true);
+    // 번쩍
+    if (after >= 0 && after < 0.2) { c.fillStyle = 'rgba(255,255,255,' + (1 - after / 0.2) * 0.9 + ')'; c.fillRect(-40, -40, W + 80, H + 80); }
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // 비네팅
+    var vg = c.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.55)');
+    c.fillStyle = vg; c.fillRect(0, 0, W, H);
+    // 영화처럼 위아래 검은 띠
+    var lb = Math.min(ease(t / 0.6), 1 - ease((t - (END - 0.7)) / 0.6)) * H * 0.09;
+    c.fillStyle = '#000'; c.fillRect(0, 0, W, lb); c.fillRect(0, H - lb, W, lb);
+    // 자막
+    CAP.forEach(function (k) {
       if (t < k[0] || t > k[1]) return;
       var a = Math.min(1, (t - k[0]) / 0.25, (k[1] - t) / 0.3), big = k[3];
       c.save(); c.globalAlpha = a; c.textAlign = 'center';
-      var fz = big ? Math.round(Math.min(44, W / 9)) : Math.round(Math.min(22, W / 17));
+      var fz = big ? Math.round(Math.min(46, W / 8.5)) : Math.round(Math.min(20, W / 18));
       c.font = (big ? '900 ' : 'bold ') + fz + 'px sans-serif';
-      var yy = big ? H * 0.36 : H * 0.86;
-      if (big) { c.translate(W / 2, yy); c.rotate(-0.06); c.scale(1 + Math.max(0, 0.3 - (t - k[0])) * 1.5, 1 + Math.max(0, 0.3 - (t - k[0])) * 1.5); c.translate(-W / 2, -yy); }
-      c.lineWidth = big ? 9 : 5; c.strokeStyle = '#0b0f20'; c.strokeText(k[2], W / 2, yy); c.fillStyle = big ? '#ffd84a' : '#fff'; c.fillText(k[2], W / 2, yy);
-      c.restore();
+      var yy = big ? H * 0.34 : H - lb - Math.max(18, H * 0.04) + (1 - a) * 6;
+      if (big) { var pop = 1 + Math.max(0, 0.3 - (t - k[0])) * 1.8; c.translate(W / 2 + (Math.random() - 0.5) * 6 * shake, yy); c.rotate(-0.07); c.scale(pop, pop); c.translate(-W / 2, -yy); }
+      c.lineWidth = big ? 10 : 4; c.strokeStyle = '#05070f'; c.strokeText(k[2], W / 2, yy);
+      if (big) { var tg = c.createLinearGradient(0, yy - fz, 0, yy); tg.addColorStop(0, '#fff6b0'); tg.addColorStop(1, '#ff9a3d'); c.fillStyle = tg; } else c.fillStyle = '#f2f2f8';
+      c.fillText(k[2], W / 2, yy); c.restore();
     });
-    if (t > 5.0) {                                         // 제목 등장
-      var tt = ease((t - 5.0) / 0.5), sc2 = 0.6 + 0.4 * tt + Math.sin(Math.min(1, (t - 5.0) / 0.5) * Math.PI) * 0.15;
-      once('title', function () { tone(523, 0.15, 'square', 0.05); setTimeout(function () { tone(784, 0.3, 'square', 0.05); }, 140); });
-      c.save(); c.translate(W / 2, H * 0.2); c.scale(sc2, sc2); c.globalAlpha = tt; c.textAlign = 'center';
-      var fs = Math.round(Math.min(56, W / 7)); c.font = '900 ' + fs + 'px sans-serif'; c.lineWidth = 8; c.strokeStyle = '#0b0f20';
-      c.strokeText('구름발', 0, 0); c.fillStyle = '#ffffff'; c.fillText('구름발', 0, 0);
-      c.strokeText('닌자', 0, fs * 1.05); c.fillStyle = '#3ddc84'; c.fillText('닌자', 0, fs * 1.05); c.restore();
+    // 제목 (금빛이 스치고 지나가요)
+    if (t > 5.6) {
+      var tt = ease((t - 5.6) / 0.55), sc2 = 0.5 + 0.5 * tt + Math.sin(Math.min(1, (t - 5.6) / 0.55) * Math.PI) * 0.18;
+      once('title', function () { tone(523, 0.15, 'square', 0.05); setTimeout(function () { tone(659, 0.15, 'square', 0.05); }, 110); setTimeout(function () { tone(1047, 0.4, 'square', 0.05); }, 220); });
+      var ty0 = H * 0.24, fs = Math.round(Math.min(60, W / 6.5));
+      c.save(); c.translate(W / 2, ty0); c.scale(sc2, sc2); c.globalAlpha = tt; c.textAlign = 'center';
+      c.font = '900 ' + fs + 'px sans-serif'; c.lineWidth = 10; c.strokeStyle = '#05070f';
+      c.strokeText('구름발', 0, 0); c.strokeText('닌자', 0, fs * 1.05);
+      c.fillStyle = '#ffffff'; c.fillText('구름발', 0, 0);
+      var ng = c.createLinearGradient(0, fs * 0.2, 0, fs * 1.1); ng.addColorStop(0, '#7dffb0'); ng.addColorStop(1, '#22b866'); c.fillStyle = ng; c.fillText('닌자', 0, fs * 1.05);
+      var sweep = ((t - 5.8) / 0.7) * fs * 6 - fs * 3;
+      if (t > 5.8 && t < 6.5) { var sh = c.createLinearGradient(sweep - 34, 0, sweep + 34, 0); sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(0.5, 'rgba(255,255,220,.95)'); sh.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = sh; c.fillText('구름발', 0, 0); c.fillText('닌자', 0, fs * 1.05); }
+      c.restore();
     }
+    if (t > END - 0.35) { c.fillStyle = 'rgba(0,0,0,' + Math.min(1, (t - (END - 0.35)) / 0.35) * 0.6 + ')'; c.fillRect(0, 0, W, H); }
     if (t >= END) return finish();
     raf = requestAnimationFrame(frame);
   }
@@ -1767,6 +1828,7 @@
   }
   function finish() {
     if (done) return; done = true; cancelAnimationFrame(raf);
+    if (started) { try { localStorage.setItem('cn_cut_seen', '1'); } catch (_) {} }
     ov.style.opacity = '0'; ov.style.pointerEvents = 'none';
     setTimeout(function () { if (ov) ov.remove(); removeEventListener('resize', size); }, 550);
   }
@@ -1775,6 +1837,30 @@
     if (!ov) { if (document.body) mount(); else return; }
     var ok = false;
     try { ok = document.readyState === 'complete' && typeof E('mode') === 'string' && typeof E('drawNinja') === 'function' && !!document.getElementById('btnPlay'); } catch (_) {}
-    if (ok || Date.now() - tStart > 15000) { clearInterval(w8); ready = true; setTimeout(play, 150); }
+    if (ok || Date.now() - tStart > 15000) {
+      clearInterval(w8); ready = true;
+      var seen = false; try { seen = localStorage.getItem('cn_cut_seen') === '1'; } catch (_) {}
+      if (seen) finish(); else setTimeout(play, 150);   // 컷신은 처음 한 번만 (설정에서 다시 볼 수 있어요)
+    }
   }, 100);
+  window.__playCutscene = function () {
+    if (ov && !done) return;
+    if (ov) ov.remove();
+    ov = null; done = false; started = false; sfx = {}; dust = []; rocks = []; leaves = []; ghosts = [];
+    mount(); play();
+  };
+  var hookSet = setInterval(function () {
+    var f; try { f = E('openSettings'); } catch (_) {} if (typeof f !== 'function') return; clearInterval(hookSet);
+    window.openSettings = function () {
+      var r = f.apply(this, arguments);
+      try {
+        var body = document.getElementById('sheetBody'), note = body && body.querySelector('.note');
+        var row = document.createElement('div'); row.className = 'tog'; row.id = 'togCut';
+        row.innerHTML = '시작 컷신 다시 보기 <span style="font-size:15px;color:#2b3a6b;font-weight:bold">▶ 보기</span>';
+        row.addEventListener('click', function () { try { E('SFX').click(); E('closeSheet')(); } catch (_) {} setTimeout(window.__playCutscene, 250); });
+        if (note) body.insertBefore(row, note); else if (body) body.appendChild(row);
+      } catch (_) {}
+      return r;
+    };
+  }, 300);
 })();
