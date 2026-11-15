@@ -1172,7 +1172,7 @@
     document.body.classList.add('pcMode');
     var wrap = document.getElementById('wrap') || document.body;
     var hint = document.createElement('div'); hint.id = 'pcKeys';
-    hint.innerHTML = '<b>←→</b>/<b>AD</b> 이동 · <b>Space</b> 점프 · <b>Shift</b>/<b>X</b> 대시 · <b>C</b> 베기 · <b>P</b> 일시정지';
+    hint.innerHTML = '<b>←→</b>/<b>AD</b> 이동 · <b>Space</b> 점프 · <b>Q</b> 대시 · <b>E</b> 베기 · <b>P</b> 일시정지';
     hint.style.display = 'none'; wrap.appendChild(hint);
     var ctrl = document.getElementById('ctrl');
     setInterval(function () {
@@ -1916,7 +1916,51 @@
         row.innerHTML = '시작 컷신 다시 보기 <span style="font-size:15px;color:#2b3a6b;font-weight:bold">▶ 보기</span>';
         row.addEventListener('click', function () { try { E('SFX').click(); E('closeSheet')(); } catch (_) {} audio(); setTimeout(window.__playCutscene, 250); });
         if (note) body.insertBefore(row, note); else if (body) body.appendChild(row);
+        if (note) note.innerHTML = note.innerHTML.replace('X 대시 · C 베기', 'Q 대시 · E 베기');
       } catch (_) {}
+      return r;
+    };
+  }, 300);
+})();
+
+// ── 안전장치: 한 번의 오류로 게임 화면 전체가 멈추지 않게 해요 ──
+(function () {
+  var E = function (s) { return (0, eval)(s); };
+  var NAMES = ['step', 'renderLobby', 'renderGame', 'drawIris', 'drawShopPreviews'], wrapped = {}, errN = 0;
+  function guard(name) {
+    var f; try { f = E(name); } catch (_) { return; }
+    if (typeof f !== 'function' || f.__safe) return;
+    var g = function () { try { return f.apply(this, arguments); } catch (e) { if (errN++ < 5 && window.console) console.warn('[안전장치] ' + name + ' 오류를 건너뛰었어요:', e); } };
+    g.__safe = true; window[name] = g;
+  }
+  // 소리 함수에 이상한 숫자가 들어오면 조용히 무시해요
+  function guardSound(name) {
+    var f; try { f = E(name); } catch (_) { return; }
+    if (typeof f !== 'function' || f.__safe) return;
+    var g = function () { for (var i = 0; i < arguments.length; i++) if (typeof arguments[i] === 'number' && !isFinite(arguments[i])) return; try { return f.apply(this, arguments); } catch (_) {} };
+    g.__safe = true; window[name] = g;
+  }
+  setInterval(function () {                              // 다른 기능이 나중에 감싸도 계속 바깥쪽에 있게 확인해요
+    NAMES.forEach(guard); ['tone', 'noise', 'swoosh', 'ring2'].forEach(guardSound);
+    // 화면 전환(iris)이 1.5초 넘게 멈춰 있으면 풀어 줘요
+    try {
+      var ir = E('iris');
+      if (ir && ir.hold) { if (!wrapped.holdAt) wrapped.holdAt = Date.now(); else if (Date.now() - wrapped.holdAt > 1500) { E('iris = null'); wrapped.holdAt = 0; } }
+      else wrapped.holdAt = 0;
+    } catch (_) {}
+  }, 500);
+})();
+
+// ── PC 키: Q 대시, E 베기 / 최고 기록 그림자(뛰어다니는 닌자) 끄기 ──
+(function () {
+  var E = function (s) { return (0, eval)(s); };
+  var hook = setInterval(function () {
+    var K, st; try { K = E('KEYS'); st = E('startStage'); } catch (_) { return; }
+    if (!K || typeof st !== 'function') return; clearInterval(hook);
+    K.KeyQ = 'd'; K.KeyE = 's';                           // 예전 키(Shift·X, C)도 그대로 돼요
+    window.startStage = function () {
+      var r = st.apply(this, arguments);
+      try { E('ghost = null'); } catch (_) {}            // 최고 기록 따라 뛰는 반투명 닌자는 안 보여요
       return r;
     };
   }, 300);
