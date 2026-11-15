@@ -4,20 +4,63 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cut">
 <title>구름발 닌자</title>
-<style>html,body{margin:0;height:100%;background:#1b2340;color:#fff;font-family:sans-serif}#ld{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-size:20px}</style>
+<style>
+html,body{margin:0;height:100%;background:#1b2340;color:#fff;font-family:sans-serif;overflow:hidden}
+#ld{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:radial-gradient(circle at 50% 35%,#2e3b6b,#141a33 70%)}
+#ld .moon{position:absolute;top:12%;right:16%;width:70px;height:70px;border-radius:50%;background:#fff3c4;box-shadow:0 0 40px #fff3c480}
+#ld .ttl{font-size:34px;font-weight:900;letter-spacing:2px;text-shadow:0 4px 0 #0b0f20}
+#ld .ttl b{color:#3ddc84}
+#ld .ninja{width:54px;height:54px;border-radius:50%;background:#20284a;border:4px solid #0b0f20;position:relative;animation:hop .7s ease-in-out infinite}
+#ld .ninja:before{content:'';position:absolute;left:-6px;right:-6px;top:14px;height:9px;background:#e8e8ef;border:3px solid #0b0f20;border-radius:4px}
+#ld .ninja:after{content:'';position:absolute;left:18px;top:16px;width:6px;height:6px;border-radius:50%;background:#0b0f20;box-shadow:12px 0 0 #0b0f20}
+#ld .cloud{width:90px;height:22px;border-radius:20px;background:#fff;opacity:.9;margin-top:-8px;animation:cl .7s ease-in-out infinite}
+@keyframes hop{0%,100%{transform:translateY(0)}50%{transform:translateY(-22px)}}
+@keyframes cl{0%,100%{transform:scaleX(1.08)}50%{transform:scaleX(1)}}
+#ld .bar{width:220px;height:14px;border:3px solid #0b0f20;border-radius:10px;background:#0d1226;overflow:hidden}
+#ld .bar i{display:block;height:100%;width:3%;background:linear-gradient(90deg,#3ddc84,#ffd84a);transition:width .2s}
+#ld .msg{font-size:14px;opacity:.85;min-height:20px}
+#ld .tip{position:absolute;bottom:30px;left:20px;right:20px;text-align:center;font-size:12px;opacity:.6}
+</style>
 </head>
 <body>
-<div id="ld">구름발 닌자 불러오는 중…</div>
+<div id="ld">
+  <div class="moon"></div>
+  <div class="ttl">구름발 <b>닌자</b></div>
+  <div class="ninja"></div><div class="cloud"></div>
+  <div class="bar"><i id="ldBar"></i></div>
+  <div class="msg" id="ldMsg">닌자를 깨우는 중… 0%</div>
+  <div class="tip" id="ldTip"></div>
+</div>
 <script>
-// 게임 파일(gureumbal-ninja.html)을 읽어서, Firebase 연결 파일을 맨 앞에 끼워 넣고 화면에 띄워요.
-fetch('gureumbal-ninja.html', { cache: 'no-cache' })
-  .then(function (r) { if (!r.ok) throw 0; return r.text(); })
-  .then(function (html) {
-    var tag = '<script src="firebase-bridge.js?v=25"><\/script>';
+// 게임 파일(gureumbal-ninja.html)을 받으면서 진행률을 보여 주고, 다 받으면 Firebase 연결 파일을 끼워 넣어 띄워요.
+(function () {
+  var TIPS = ['팁: 공중에서 한 번 더 점프할 수 있어요', '팁: 적을 연속으로 베면 콤보 보너스!', '팁: 5연속 처치하면 닌자 폭주!', '팁: 광전사 사냥터는 켜 두기만 해도 엽전이 모여요', '팁: 금빛으로 빛나는 적은 엽전 10개'];
+  var MSGS = ['닌자를 깨우는 중…', '대나무 숲을 심는 중…', '구름을 띄우는 중…', '수리검을 가는 중…', '거의 다 왔어요…'];
+  var bar = document.getElementById('ldBar'), msg = document.getElementById('ldMsg');
+  document.getElementById('ldTip').textContent = TIPS[Math.floor(Math.random() * TIPS.length)];
+  var EXPECT = 5660000;
+  function show(p) { p = Math.max(0.03, Math.min(0.99, p)); bar.style.width = (p * 100) + '%'; msg.textContent = MSGS[Math.min(MSGS.length - 1, Math.floor(p * MSGS.length))] + ' ' + Math.floor(p * 100) + '%'; }
+  function start(html) {
+    bar.style.width = '100%'; msg.textContent = '준비 완료!';
+    var tag = '<script src="firebase-bridge.js?v=26"><\/script>';
     html = /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, function (m) { return m + tag; }) : tag + html;
-    document.open(); document.write(html); document.close();
-  })
-  .catch(function () { document.getElementById('ld').textContent = '게임을 불러오지 못했어요. 새로고침해 주세요'; });
+    setTimeout(function () { document.open(); document.write(html); document.close(); }, 60);
+  }
+  function fail() { msg.textContent = '게임을 불러오지 못했어요. 새로고침해 주세요'; }
+  fetch('gureumbal-ninja.html', { cache: 'no-cache' }).then(function (r) {
+    if (!r.ok) throw 0;
+    if (!r.body || !r.body.getReader || !window.TextDecoder) return r.text().then(start);
+    var reader = r.body.getReader(), dec = new TextDecoder('utf-8'), parts = [], got = 0;
+    function pump() {
+      return reader.read().then(function (x) {
+        if (x.done) { parts.push(dec.decode()); return start(parts.join('')); }
+        got += x.value.length; parts.push(dec.decode(x.value, { stream: true })); show(got / EXPECT);
+        return pump();
+      });
+    }
+    return pump();
+  }).catch(fail);
+})();
 </script>
 </body>
 </html>
