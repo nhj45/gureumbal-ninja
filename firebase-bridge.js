@@ -205,7 +205,7 @@
   var pollTimer = null;
   function afterLogin(x) {
     var u = x.auth.currentUser; if (!u) return;
-    x.F.getDoc(x.F.doc(x.db, 'admins', u.uid)).then(function (d) { ADMIN = d.exists() || u.email === ADMIN_EMAIL; updateAdminBtn();
+    x.F.getDoc(x.F.doc(x.db, 'admins', u.uid)).then(function (d) { ADMIN = d.exists() || u.email === ADMIN_EMAIL; window.__cnAdmin = ADMIN; updateAdminBtn();
       if (ADMIN) { var rmF = { tower: x.F.deleteField(), title: x.F.deleteField() }; for (var si = 0; si < STAGE_COUNT; si++) rmF['t' + si] = x.F.deleteField(); x.F.updateDoc(x.F.doc(x.db, 'ranks', u.uid), rmF).catch(function () {}); x.F.deleteDoc(x.F.doc(x.db, 'presence', u.uid)).catch(function () {}); } }).catch(function () { ADMIN = false; updateAdminBtn(); });
     clearInterval(pollTimer);
     pollTimer = setInterval(function () { poll(x); }, 20000);
@@ -746,7 +746,8 @@
     { id: 't2', name: '엽전 부자', price: 300 },
     { id: 't3', name: '통나무 장인', price: 300 },
     { id: 't4', name: '탑의 지배자', price: 600 },
-    { id: 't5', name: '하찮은 전설', price: 1000 }
+    { id: 't5', name: '하찮은 전설', price: 1000 },
+    { id: 'leg', name: '전설의 닌자', price: 0, secret: true }   // 250스테이지를 다 깨면 받아요
   ];
   var TOOLS = [
     { id: 'shield', name: '방패 부적', price: 60, d: '다음 판을 시작할 때 방패를 두르고 시작해요 (한 번 막아줘요)' },
@@ -781,6 +782,7 @@
   var evalg = function (code) { try { return (0, eval)(code); } catch (_) { return undefined; } };
   function S() { return g('save') || {}; }
   function inv() { var s = S(); s.cnItems = s.cnItems || {}; return s.cnItems; }
+  window.__cnFb = function () { return fb(); }; window.__cnOwned = function (k) { return owned(k); };
   function owned(kind) { var s = S(); s.cnOwn = s.cnOwn || {}; s.cnOwn[kind] = s.cnOwn[kind] || ['basic', '']; if (kind === 'char' && ADMIN && s.cnOwn.char.indexOf('ninjo') < 0) s.cnOwn.char.push('ninjo'); return s.cnOwn[kind]; }
   function save2() { try { g('persist')(); g('refreshLobby')(); } catch (_) {} }
   var swatch = function (c) { return c === 'rainbow' ? 'conic-gradient(#ff4a4a,#ffd84a,#4fd27a,#4aa8ff,#b48cff,#ff4a4a)' : 'rgb(' + c.join(',') + ')'; };
@@ -980,7 +982,7 @@
       body += '<div class="shp-list">' + TOOLS.map(function (x) { var n = it[x.id] || 0, no = (s.coins || 0) < x.price || n >= 9 ? ' no' : ''; return '<div class="shp-it"><span class="shp-sw" style="background:' + (x.id === 'shield' ? '#8fd3ff' : '#ffd84a') + '"></span><div class="shp-tx"><b>' + x.name + ' <span style="color:#a06a00">×' + n + '</span></b><small>' + x.d + '</small></div><button class="shp-b' + no + '" data-tool="' + x.id + '"><i class="coin sm"></i>' + x.price + '</button></div>'; }).join('') + '</div><div class="shp-note">부적은 9개까지 가질 수 있어요. 방패 부적은 판을 시작할 때 1개씩 자동으로 써요.</div>';
     } else if (shopTab2 === 'title') {
       var oTi = owned('title'), curTi = s.cnTitle || '';
-      body += '<div class="shp-list">' + TITLES.map(function (x) { var own = oTi.indexOf(x.id) >= 0; return '<div class="shp-it' + (curTi === x.id ? ' eq' : '') + '"><span class="shp-sw" style="background:#2b3a6b"></span><div class="shp-tx"><b>' + (x.id ? '[' + x.name + ']' : x.name) + '</b><small>랭킹에서 닉네임 앞에 붙어요</small></div>' + priceBtn(x, 'title', curTi === x.id, own) + '</div>'; }).join('') + '</div>';
+      body += '<div class="shp-list">' + TITLES.filter(function (x) { return !x.secret || oTi.indexOf(x.id) >= 0; }).map(function (x) { var own = oTi.indexOf(x.id) >= 0; return '<div class="shp-it' + (curTi === x.id ? ' eq' : '') + '"><span class="shp-sw" style="background:#2b3a6b"></span><div class="shp-tx"><b>' + (x.id ? '[' + x.name + ']' : x.name) + '</b><small>랭킹에서 닉네임 앞에 붙어요</small></div>' + priceBtn(x, 'title', curTi === x.id, own) + '</div>'; }).join('') + '</div>';
     } else if (shopTab2 === 'statue') {
       var lv = Number(s.cnStatue) || 0, TIERS = window.__STATUE_TIERS || [];
       body += '<div class="shp-note" style="margin-bottom:8px">로비와 광전사 사냥터에 내 캐릭터 동상이 세워지고, 위에 내 닉네임이 새겨져요. 다른 사람들 화면에도 보여요. 돌부터 차례대로 올릴 수 있어요.</div><div class="shp-list">' +
@@ -2496,6 +2498,302 @@
           };
           var earn = card.querySelector('.earn'); earn ? earn.after(bt) : card.appendChild(bt);
         }, 1800);
+      } catch (_) {}
+      return r;
+    };
+  }, 300);
+})();
+
+// ── 완성도 + 재미: 조작 연습, 250스테이지 엔딩, 버그 신고, 오늘의 도전, 동상 마을 ──
+(function () {
+  var E = function (s) { return (0, eval)(s); };
+  var PC = window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matches;
+  function sfx(n) { try { E('SFX')[n || 'click'](); } catch (_) {} }
+  function h(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function today() { return new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10); }
+  var css = document.createElement('style');
+  css.textContent = [
+    '.cnOv{position:fixed;inset:0;z-index:9000;background:rgba(8,10,22,.8);display:flex;align-items:center;justify-content:center;animation:fade .2s}',
+    '.cnCard{background:#fffaf0;border-radius:22px;padding:20px 18px 16px;width:min(88vw,370px);max-height:84vh;overflow:auto;text-align:center;color:#2b2b3a;box-shadow:0 6px 0 #141418;border:3px solid #141418}',
+    '.cnCard h3{margin:4px 0 6px;font-size:22px}.cnCard p{margin:6px 0;font-size:15.5px;line-height:1.5;color:#4a4658}',
+    '.cnBig{font-size:54px;line-height:1.1;margin:6px 0}',
+    '.cnRow{display:flex;gap:8px;margin-top:12px}.cnRow button{flex:1}',
+    '.cnB{border:3px solid #141418;border-radius:14px;padding:11px 8px;font:inherit;font-size:17px;background:#3ccf6e;color:#fff;box-shadow:0 4px 0 #141418;cursor:pointer}',
+    '.cnB.alt{background:#efe6d2;color:#2b2b3a}.cnB.blue{background:#3d7bff}',
+    '.cnDots{display:flex;gap:6px;justify-content:center;margin:10px 0 2px}.cnDots i{width:8px;height:8px;border-radius:50%;background:#d8cfbb}.cnDots i.on{background:#3d7bff}',
+    '.cnTa{width:100%;box-sizing:border-box;height:120px;border:2px solid #141418;border-radius:12px;padding:10px;font:inherit;font-size:15px;resize:none}',
+    '.cnList{text-align:left;margin:8px 0;font-size:15px}.cnList div{display:flex;justify-content:space-between;padding:6px 4px;border-bottom:1px solid #eadfc8}.cnList .me{background:#fff1b8;border-radius:8px}',
+    '.cnGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}.cnTile{background:#2a1a3a;border-radius:14px;padding:4px 4px 8px;color:#fff;border:2px solid #141418}',
+    '.cnTile canvas{width:100%;height:auto;display:block}.cnTile b{display:block;font-size:14px;margin:2px 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.cnHeart{border:2px solid #141418;border-radius:12px;background:#fff;color:#e2425c;font:inherit;font-size:15px;padding:4px 12px;cursor:pointer}.cnHeart.on{background:#ffd6de}',
+    '#cnExtra{display:flex;gap:10px;width:100%}#cnExtra button{flex:1;min-height:0;padding-top:9px;padding-bottom:9px;font-size:16px}',
+    '#cnEnd{position:fixed;inset:0;z-index:9500;background:#000}#cnEnd canvas{width:100%;height:100%;display:block}'
+  ].join('');
+  document.head.appendChild(css);
+  function overlay(html) {
+    var o = document.createElement('div'); o.className = 'cnOv'; o.innerHTML = '<div class="cnCard">' + html + '</div>';
+    o.addEventListener('click', function (e) { if (e.target === o) o.remove(); });
+    document.body.appendChild(o); return o;
+  }
+  function fbx() { return window.__cnFb ? window.__cnFb() : Promise.reject('no fb'); }
+  function persist() { try { E('persist')(); } catch (_) {} try { var w = document.getElementById('wallet'); if (w) w.textContent = E('save').coins; } catch (_) {} }
+
+  // ───── 1. 조작 연습 (처음 수련할 때 한 번, 설정에서 다시 보기) ─────
+  var TUT = [
+    ['🏃', '이동', PC ? '← → 방향키로 움직여요.' : '왼쪽 아래 ◀ ▶ 버튼으로 움직여요.'],
+    ['⤴️', '점프 · 2단 점프', (PC ? 'Space' : '초록 점프 버튼') + '으로 점프! 공중에서 한 번 더 누르면 2단 점프예요.'],
+    ['🧱', '벽 타기', '벽에 붙으면 천천히 미끄러져요. 그때 점프하면 반대쪽으로 벽 점프!'],
+    ['💨', '대시', (PC ? 'Q 키' : '파란 대시 버튼') + '로 앞으로 휙! 대시하는 동안은 몬스터에 닿아도 괜찮아요.'],
+    ['🗡️', '베기 · 보스 잡기', (PC ? 'E 키' : '빨간 베기 버튼') + '로 몬스터를 베요. 보스는 머리를 밟거나 대시로 부딪혀서 때려요.'],
+    ['🚩', '목표', '엽전과 두루마리 3개를 모으면서 맨 위 깃발까지 올라가요. 떨어지면 마지막 등불에서 다시 시작해요!']
+  ];
+  function showTutorial(done) {
+    var i = 0, o = overlay('');
+    function draw() {
+      var t = TUT[i], last = i === TUT.length - 1;
+      o.firstChild.innerHTML = '<div style="font-size:13px;color:#8a8270">조작 연습 ' + (i + 1) + ' / ' + TUT.length + '</div><div class="cnBig">' + t[0] + '</div><h3>' + t[1] + '</h3><p>' + t[2] + '</p>' +
+        '<div class="cnDots">' + TUT.map(function (_, k) { return '<i class="' + (k === i ? 'on' : '') + '"></i>'; }).join('') + '</div>' +
+        '<div class="cnRow">' + (i ? '<button class="cnB alt" data-t="prev">이전</button>' : '<button class="cnB alt" data-t="skip">건너뛰기</button>') + '<button class="cnB' + (last ? '' : ' blue') + '" data-t="next">' + (last ? '수련 시작!' : '다음') + '</button></div>';
+    }
+    o.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-t]'); if (!b) return; sfx();
+      var a = b.dataset.t;
+      if (a === 'prev') i--; else if (a === 'next' && i < TUT.length - 1) i++;
+      else { o.remove(); try { localStorage.setItem('cn_tut_seen', '1'); } catch (_) {} if (done) done(); return; }
+      draw();
+    });
+    o.onclick = null; draw();
+  }
+  window.__showTutorial = showTutorial;
+
+  // ───── 2. 250스테이지 엔딩 ─────
+  function grantEnding() {
+    var sv = E('save'); if (sv.cnEnding) return false;
+    sv.cnEnding = Date.now(); sv.coins += 500;
+    try { var ow = window.__cnOwned('title'); if (ow.indexOf('leg') < 0) ow.push('leg'); sv.cnTitle = 'leg'; } catch (_) {}
+    persist(); return true;
+  }
+  function playEnding(first) {
+    if (document.getElementById('cnEnd')) return;
+    var wrap = document.createElement('div'); wrap.id = 'cnEnd';
+    var cv = document.createElement('canvas'); wrap.appendChild(cv); document.body.appendChild(wrap);
+    var dpr = Math.min(2, window.devicePixelRatio || 1), W = innerWidth, H = innerHeight;
+    cv.width = W * dpr; cv.height = H * dpr; var c = cv.getContext('2d'); c.scale(dpr, dpr);
+    var img = null, sv = E('save');
+    try { (window.__charSrc ? window.__charSrc(sv.cnChar || 'basic') : Promise.reject()).then(function (src) { var im = new Image(); im.onload = function () { img = im; }; im.src = src; }).catch(function () {}); } catch (_) {}
+    var stars = []; for (var i = 0; i < 90; i++) stars.push([Math.random() * W, Math.random() * H * 0.7, Math.random() * 1.6 + 0.4, Math.random() * 6]);
+    var fw = [], t0 = performance.now(), done = false, END = 17;
+    var LINES = [[0.6, 3.6, '250개의 수련을 모두 마쳤다'], [3.8, 6.8, '하찮던 닌자는 구름 위 정상에 올라'], [7, 10.5, '마침내 전설이 되었다!']];
+    function tone(f, d, ty, v, sl, dl) { setTimeout(function () { try { E('tone')(f, d, ty || 'triangle', v || 0.05, sl || 0); } catch (_) {} }, (dl || 0) * 1000); }
+    [523, 659, 784, 1047, 784, 1047, 1319].forEach(function (f, k) { tone(f, 0.35, 'triangle', 0.05, 0, 7 + k * 0.16); });
+    function boom(x, y) {
+      var col = ['#ffd23f', '#ff6a8a', '#7cd4ff', '#a6ff7c', '#d8a6ff'][Math.floor(Math.random() * 5)];
+      for (var k = 0; k < 46; k++) { var a = k / 46 * 6.283, sp = 90 + Math.random() * 110; fw.push({ x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, l: 1.4 + Math.random() * 0.6, c: col }); }
+      tone(120 + Math.random() * 80, 0.25, 'sawtooth', 0.03, 40);
+    }
+    var lastBoom = 0, last = t0;
+    function frame(now) {
+      if (done) return;
+      var t = (now - t0) / 1000, dt = Math.min(0.05, (now - last) / 1000); last = now;
+      var dawn = Math.min(1, Math.max(0, (t - 5) / 6));
+      var g = c.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, 'rgb(' + Math.round(10 + dawn * 40) + ',' + Math.round(12 + dawn * 40) + ',' + Math.round(40 + dawn * 70) + ')');
+      g.addColorStop(1, 'rgb(' + Math.round(40 + dawn * 215) + ',' + Math.round(30 + dawn * 140) + ',' + Math.round(70 + dawn * 60) + ')');
+      c.fillStyle = g; c.fillRect(0, 0, W, H);
+      stars.forEach(function (s2) { c.globalAlpha = (1 - dawn * 0.8) * (0.5 + Math.sin(t * 2 + s2[3]) * 0.5); c.fillStyle = '#fff'; c.beginPath(); c.arc(s2[0], s2[1], s2[2], 0, 6.283); c.fill(); });
+      c.globalAlpha = 1;
+      // 해
+      if (dawn > 0) { var sy = H * 0.62 - dawn * H * 0.22; var sg = c.createRadialGradient(W / 2, sy, 10, W / 2, sy, 140); sg.addColorStop(0, 'rgba(255,230,150,' + dawn + ')'); sg.addColorStop(1, 'rgba(255,180,90,0)'); c.fillStyle = sg; c.fillRect(0, 0, W, H); }
+      // 구름 바다와 봉우리
+      c.fillStyle = 'rgba(255,255,255,' + (0.55 + dawn * 0.3) + ')';
+      for (var k = 0; k < 7; k++) { var cx = ((k * 140 + t * 14) % (W + 200)) - 100; c.beginPath(); c.ellipse(cx, H * 0.78, 110, 34, 0, 0, 6.283); c.fill(); }
+      var py = H * 0.62 + Math.max(0, 1 - t / 3) * H * 0.5;
+      c.fillStyle = '#2a2238'; c.beginPath(); c.moveTo(W / 2 - 150, H); c.lineTo(W / 2 - 34, py); c.lineTo(W / 2 + 34, py); c.lineTo(W / 2 + 150, H); c.fill();
+      c.fillStyle = '#ffffff'; c.beginPath(); c.moveTo(W / 2 - 34, py); c.lineTo(W / 2 + 34, py); c.lineTo(W / 2 + 22, py + 16); c.lineTo(W / 2, py + 8); c.lineTo(W / 2 - 20, py + 18); c.fill();
+      // 닌자
+      if (img) { var nh = 96, nw = nh * img.width / img.height, jump = t > 10.5 ? Math.abs(Math.sin((t - 10.5) * 4)) * 18 : 0; c.drawImage(img, W / 2 - nw / 2, py - nh - jump + 4, nw, nh); }
+      // 왕관
+      if (t > 10.5) { var cy2 = py - 112 - (t > 10.5 ? Math.abs(Math.sin((t - 10.5) * 4)) * 18 : 0); c.fillStyle = '#ffd23f'; c.strokeStyle = '#141418'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(W / 2 - 16, cy2); c.lineTo(W / 2 - 16, cy2 - 14); c.lineTo(W / 2 - 8, cy2 - 6); c.lineTo(W / 2, cy2 - 17); c.lineTo(W / 2 + 8, cy2 - 6); c.lineTo(W / 2 + 16, cy2 - 14); c.lineTo(W / 2 + 16, cy2); c.closePath(); c.fill(); c.stroke(); }
+      // 불꽃놀이
+      if (t > 7 && t - lastBoom > 0.55) { lastBoom = t; boom(W * (0.15 + Math.random() * 0.7), H * (0.12 + Math.random() * 0.3)); }
+      fw.forEach(function (p) { p.vy += 60 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.985; p.l -= dt; c.globalAlpha = Math.max(0, Math.min(1, p.l)); c.fillStyle = p.c; c.beginPath(); c.arc(p.x, p.y, 2.4, 0, 6.283); c.fill(); });
+      fw = fw.filter(function (p) { return p.l > 0; }); c.globalAlpha = 1;
+      // 글자
+      c.textAlign = 'center'; c.font = 'bold ' + Math.min(26, W / 15) + 'px Jua, sans-serif';
+      LINES.forEach(function (L) { if (t > L[0] && t < L[1] + 0.6) { var a = Math.min(1, (t - L[0]) * 2, (L[1] + 0.6 - t) * 2); c.globalAlpha = Math.max(0, a); c.lineWidth = 5; c.strokeStyle = '#141418'; c.strokeText(L[2], W / 2, H * 0.2); c.fillStyle = '#fff6d0'; c.fillText(L[2], W / 2, H * 0.2); } });
+      c.globalAlpha = 1;
+      if (t > 11) {
+        var a2 = Math.min(1, (t - 11) * 1.5); c.globalAlpha = a2;
+        c.font = 'bold ' + Math.min(30, W / 12) + 'px Jua, sans-serif'; c.lineWidth = 6; c.strokeStyle = '#141418';
+        c.strokeText('👑 전설의 닌자 👑', W / 2, H * 0.17); c.fillStyle = '#ffd23f'; c.fillText('👑 전설의 닌자 👑', W / 2, H * 0.17);
+        c.font = Math.min(18, W / 20) + 'px Jua, sans-serif'; c.lineWidth = 4;
+        var sub = first ? '칭호 [전설의 닌자] · 엽전 +500 획득!' : '플레이해 줘서 고마워요!';
+        c.strokeText(sub, W / 2, H * 0.17 + 34); c.fillStyle = '#fff'; c.fillText(sub, W / 2, H * 0.17 + 34);
+        c.globalAlpha = 1;
+      }
+      if (t > 13) { c.font = '15px Jua, sans-serif'; c.fillStyle = 'rgba(255,255,255,' + (0.5 + Math.sin(t * 4) * 0.4) + ')'; c.fillText('화면을 누르면 돌아가요', W / 2, H - 40); }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+    wrap.addEventListener('click', function () { if ((performance.now() - t0) / 1000 < 2) return; done = true; wrap.remove(); });
+  }
+  window.__playEnding = playEnding;
+
+  // ───── 3. 버그 신고 ─────
+  function openReport() {
+    var o = overlay('<div class="cnBig" style="font-size:40px">🐞</div><h3>버그 신고 · 의견 보내기</h3><p>어디서 어떤 일이 있었는지 적어 주세요. 관리자에게 바로 전달돼요.</p>' +
+      '<textarea class="cnTa" maxlength="500" placeholder="예) 37스테이지 오른쪽 벽에 끼었어요"></textarea><p class="cnMsg" style="min-height:20px;font-size:14px"></p>' +
+      '<div class="cnRow"><button class="cnB alt" data-r="x">닫기</button><button class="cnB blue" data-r="send">보내기</button></div>');
+    var ta = o.querySelector('textarea'), msg = o.querySelector('.cnMsg');
+    o.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-r]'); if (!b) return; sfx();
+      if (b.dataset.r === 'x') { o.remove(); return; }
+      var text = ta.value.trim(); if (text.length < 2) { msg.textContent = '내용을 조금 더 적어 주세요'; return; }
+      b.disabled = true; msg.textContent = '보내는 중…';
+      fbx().then(function (x) {
+        var u = x.auth.currentUser; if (!u) throw 'guest';
+        var ts = String(Date.now()), st = 0; try { st = E('stageIdx') + 1; } catch (_) {}
+        var rep = {}; rep[ts] = { t: text.slice(0, 500), s: st, ua: navigator.userAgent.slice(0, 140) };
+        return x.F.setDoc(x.F.doc(x.db, 'users', u.uid), { reports: rep }, { merge: true });
+      }).then(function () { msg.textContent = '보냈어요! 고마워요 🙏'; ta.value = ''; setTimeout(function () { o.remove(); }, 1200); })
+        .catch(function (er) { b.disabled = false; msg.textContent = er === 'guest' ? '로그인해야 보낼 수 있어요' : '보내지 못했어요. 잠시 뒤 다시 해 주세요'; });
+    });
+  }
+  window.__openReport = openReport;
+
+  // ───── 4. 오늘의 도전 ─────
+  var daily = { on: false, idx: -1 };
+  function dailyIdx(d) {
+    var hsh = 0; for (var i = 0; i < d.length; i++) hsh = (hsh * 31 + d.charCodeAt(i)) >>> 0;
+    var idx = 5 + (hsh % 195); if (idx % 25 === 24) idx++; return idx;   // 6~201번 중 보스 판은 빼요
+  }
+  function fmt(t) { return (Math.round(t * 10) / 10).toFixed(1) + '초'; }
+  function openDaily() {
+    var d = today(), idx = dailyIdx(d), S = E('STAGES')[idx], sv = E('save'), mine = sv.cnDailyBest && sv.cnDailyBest.d === d ? sv.cnDailyBest.t : null;
+    var o = overlay('<div style="font-size:13px;color:#8a8270">' + d + '</div><h3>📅 오늘의 도전</h3>' +
+      '<p><b>STAGE ' + (idx + 1) + ' · ' + h(S.name) + '</b><br><small>' + h(S.sub || '') + '</small></p>' +
+      '<p style="font-size:14px">하루에 하나씩 바뀌는 판이에요. 아직 안 열린 판도 할 수 있어요!<br>오늘 처음 깨면 <b>엽전 +30</b> · 빨리 깰수록 순위가 올라가요</p>' +
+      '<p>내 오늘 기록: <b>' + (mine == null ? '없음' : fmt(mine)) + '</b></p>' +
+      '<div class="cnList" id="cnDailyList"><div><span>순위 불러오는 중…</span></div></div>' +
+      '<div class="cnRow"><button class="cnB alt" data-d="x">닫기</button><button class="cnB" data-d="go">도전하기!</button></div>');
+    o.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-d]'); if (!b) return; sfx();
+      o.remove();
+      if (b.dataset.d === 'go') { daily.on = true; daily.idx = idx; try { E('goStage')(idx); } catch (_) {} }
+    });
+    fbx().then(function (x) {
+      var me = x.auth.currentUser && x.auth.currentUser.uid;
+      return x.F.getDocs(x.F.query(x.F.collection(x.db, 'ranks'), x.F.where('dd', '==', d))).then(function (snap) {
+        var rows = snap.docs.map(function (r) { var v = r.data(); return { n: v.nick || '닌자', t: Number(v.dt), me: r.id === me }; }).filter(function (r) { return r.t > 0; }).sort(function (a, b) { return a.t - b.t; }).slice(0, 10);
+        var el = document.getElementById('cnDailyList'); if (!el) return;
+        el.innerHTML = rows.length ? rows.map(function (r, i) { return '<div class="' + (r.me ? 'me' : '') + '"><span>' + (i < 3 ? ['🥇', '🥈', '🥉'][i] : (i + 1) + '.') + ' ' + h(r.n) + '</span><b>' + fmt(r.t) + '</b></div>'; }).join('') : '<div><span>아직 아무도 안 깼어요. 1등 해 보세요!</span></div>';
+      });
+    }).catch(function () { var el = document.getElementById('cnDailyList'); if (el) el.innerHTML = '<div><span>순위는 로그인하면 볼 수 있어요</span></div>'; });
+  }
+  function dailyClear() {
+    var d = today(), sv = E('save'), t = E('runTime'), first = sv.cnDaily !== d;
+    if (first) { sv.cnDaily = d; sv.coins += 30; }
+    var prev = sv.cnDailyBest && sv.cnDailyBest.d === d ? sv.cnDailyBest.t : null, best = prev == null ? t : Math.min(prev, t);
+    sv.cnDailyBest = { d: d, t: best }; persist();
+    fbx().then(function (x) { var u = x.auth.currentUser; if (!u || window.__cnAdmin) return; return x.F.setDoc(x.F.doc(x.db, 'ranks', u.uid), { dd: d, dt: Math.round(best * 100) / 100 }, { merge: true }); }).catch(function () {});
+    setTimeout(function () {
+      var card = document.getElementById('mcard'); if (!card) return;
+      var nx = card.querySelector('[data-act="next"]'); if (nx) nx.remove();
+      var div = document.createElement('div'); div.style.cssText = 'background:#e8f0ff;border-radius:12px;padding:8px 10px;margin:8px 0 2px;font-size:15px;text-align:center;color:#2b3a6b';
+      div.innerHTML = '📅 오늘의 도전 ' + fmt(t) + (prev == null || t < prev ? ' · <span>오늘 최고!</span>' : '') + (first ? ' · 엽전 +30' : '');
+      var earn = card.querySelector('.earn'); earn ? earn.after(div) : card.appendChild(div);
+    }, 1650);
+  }
+
+  // ───── 5. 동상 마을 (다른 사람 동상에 하트) ─────
+  function openVillage() {
+    var sv = E('save'), others = (window.__otherStatues ? window.__otherStatues() : []).slice(0, 20), list = [];
+    if (sv.cnStatue) list.push({ mine: true, nick: '내 동상' });
+    others.forEach(function (o) { list.push(o); });
+    var o = overlay('<h3>🗿 동상 마을</h3><p style="font-size:14px">동상을 세운 닌자들이에요. 마음에 드는 동상에 하트를 눌러 주세요!</p>' +
+      (list.length ? '<div class="cnGrid">' + list.map(function (it, i) { return '<div class="cnTile"><canvas width="280" height="230" data-i="' + i + '"></canvas><b>' + h(it.nick) + '</b>' + (it.mine ? '<span class="cnHeart" data-mine="1">♥ <span>…</span></span>' : '<button class="cnHeart" data-u="' + h(it.uid) + '">♥ <span>…</span></button>') + '</div>'; }).join('') + '</div>'
+        : '<p>아직 동상을 세운 사람이 없어요. 상점의 동상 탭에서 처음으로 세워 보세요!</p>') +
+      '<div class="cnRow"><button class="cnB alt" data-v="x">닫기</button></div>');
+    o.querySelectorAll('canvas').forEach(function (cv) {
+      var it = list[+cv.dataset.i], c = cv.getContext('2d');
+      var g = c.createLinearGradient(0, 0, 0, 230); g.addColorStop(0, '#2a1a3a'); g.addColorStop(1, '#d0705a'); c.fillStyle = g; c.fillRect(0, 0, 280, 230);
+      c.fillStyle = '#4a3a2a'; c.fillRect(0, 200, 280, 30);
+      try { window.__drawStatue(c, 140, 200, 1.05, it.mine ? undefined : it); } catch (_) {}
+    });
+    o.addEventListener('click', function (e) {
+      if (e.target.closest('[data-v]')) { sfx(); o.remove(); return; }
+      var b = e.target.closest('button[data-u]'); if (!b || b.disabled) return; sfx(); b.disabled = true;
+      var uid = b.dataset.u, on = !b.classList.contains('on');
+      fbx().then(function (x) {
+        var u = x.auth.currentUser; if (!u) throw 'guest';
+        var ref = x.F.doc(x.db, 'ranks', u.uid), up = {};
+        if (on) { up.liked = {}; up.liked[uid] = true; return x.F.setDoc(ref, up, { merge: true }); }
+        up['liked.' + uid] = x.F.deleteField(); return x.F.updateDoc(ref, up);
+      }).then(function () {
+        b.classList.toggle('on', on); var sp = b.querySelector('span'); sp.textContent = Math.max(0, (parseInt(sp.textContent, 10) || 0) + (on ? 1 : -1));
+        if (on) { try { E('SFX').coin(); } catch (_) {} }
+      }).catch(function (er) { if (er === 'guest') { b.querySelector('span').textContent = '로그인 필요'; } })
+        .then(function () { b.disabled = false; });
+    });
+    // 하트 수 불러오기
+    fbx().then(function (x) {
+      var me = x.auth.currentUser && x.auth.currentUser.uid;
+      list.forEach(function (it, i) {
+        var uid = it.mine ? me : it.uid; if (!uid) return;
+        x.F.getDocs(x.F.query(x.F.collection(x.db, 'ranks'), x.F.where('liked.' + uid, '==', true))).then(function (snap) {
+          var el = o.querySelectorAll('.cnHeart')[i]; if (!el) return;
+          el.querySelector('span').textContent = snap.docs.length;
+          if (!it.mine && me && snap.docs.some(function (d) { return d.id === me; })) el.classList.add('on');
+        }).catch(function () { var el = o.querySelectorAll('.cnHeart')[i]; if (el) el.querySelector('span').textContent = '0'; });
+      });
+    }).catch(function () { o.querySelectorAll('.cnHeart span').forEach(function (s2) { s2.textContent = '0'; }); });
+  }
+  window.__openVillage = openVillage;
+
+  // ───── 로비 버튼과 설정 메뉴 ─────
+  var waitLobby = setInterval(function () {
+    var box = document.querySelector('#lobby .lobbyBtns'); if (!box) return; clearInterval(waitLobby);
+    var row = document.createElement('div'); row.className = 'row'; row.id = 'cnExtra';
+    row.innerHTML = '<button class="mid" id="btnDaily"><span class="lbl">📅 오늘의 도전</span><b class="dot hide" id="dailyDot"></b></button><button class="mid" id="btnVillage"><span class="lbl">🗿 동상 마을</span></button>';
+    box.appendChild(row);
+    document.getElementById('btnDaily').addEventListener('click', function () { sfx(); openDaily(); });
+    document.getElementById('btnVillage').addEventListener('click', function () { sfx(); openVillage(); });
+    setInterval(function () { try { var dot = document.getElementById('dailyDot'); if (dot) dot.classList.toggle('hide', E('save').cnDaily === today()); } catch (_) {} }, 1500);
+    var play = document.getElementById('btnPlay'); if (play) play.addEventListener('click', function () { daily.on = false; }, true);
+  }, 300);
+
+  var hook = setInterval(function () {
+    var gs, cs, os, st, set; try { gs = E('goStage'); cs = E('clearStage'); os = E('openStages'); st = E('startStage'); set = E('openSettings'); } catch (_) { return; }
+    if ([gs, cs, os, st, set].some(function (f) { return typeof f !== 'function'; })) return; clearInterval(hook);
+    window.goStage = function (i) {
+      var self = this, args = arguments, seen = false; try { seen = !!localStorage.getItem('cn_tut_seen'); } catch (_) {}
+      if (i === 0 && !seen && !E('save').best.s0) { showTutorial(function () { gs.apply(self, args); }); return; }
+      return gs.apply(this, arguments);
+    };
+    window.openStages = function () { daily.on = false; return os.apply(this, arguments); };
+    window.startStage = function (i) { if (i !== daily.idx) daily.on = false; return st.apply(this, arguments); };
+    window.clearStage = function () {
+      var i = E('stageIdx'), sv = E('save'), isDaily = daily.on && i === daily.idx, unl = sv.unlocked;
+      var r = cs.apply(this, arguments);
+      try {
+        if (isDaily) { if (i >= unl) { sv.unlocked = unl; persist(); } setTimeout(dailyClear, 0); }   // 보상은 엽전 줄이기(40%)가 끝난 뒤에 줘요   // 아직 안 열린 판을 깨도 스테이지가 열리지는 않아요
+        if (!E('ENDLESS') && i === E('STAGES').length - 1 && E('STAGES').length >= 250) { setTimeout(function () { var first = grantEnding(); setTimeout(function () { playEnding(first); }, 2400); }, 0); }
+      } catch (_) {}
+      return r;
+    };
+    window.openSettings = function () {
+      var r = set.apply(this, arguments);
+      try {
+        var body = document.getElementById('sheetBody'), note = body && body.querySelector('.note');
+        function add(label, btn, fn) {
+          var row = document.createElement('div'); row.className = 'tog';
+          row.innerHTML = label + ' <span style="font-size:15px;color:#2b3a6b;font-weight:bold">' + btn + '</span>';
+          row.addEventListener('click', function () { sfx(); try { E('closeSheet')(); } catch (_) {} setTimeout(fn, 200); });
+          if (note) body.insertBefore(row, note); else body.appendChild(row);
+        }
+        add('조작 방법 보기', '▶ 보기', function () { showTutorial(); });
+        if (E('save').cnEnding) add('엔딩 다시 보기', '👑 보기', function () { playEnding(false); });
+        add('버그 신고 · 의견 보내기', '🐞 쓰기', openReport);
       } catch (_) {}
       return r;
     };
