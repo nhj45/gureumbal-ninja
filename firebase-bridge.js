@@ -1648,3 +1648,100 @@
     };
   }, 300);
 })();
+
+// ── 시작 화면: 게임이 다 준비될 때까지 가려 두고, 준비되면 짧은 컷신을 보여 줘요 ──
+(function () {
+  var E = function (s) { return (0, eval)(s); };
+  var ov, cv, c, W, H, dpr, t0 = 0, raf, done = false, ready = false, started = false;
+  var css = '#bootOv{position:fixed;inset:0;z-index:99999;background:#141a33;touch-action:none;user-select:none;transition:opacity .5s}' +
+    '#bootOv canvas{position:absolute;inset:0;width:100%;height:100%}' +
+    '#bootOv .bootWait{position:absolute;left:0;right:0;top:50%;text-align:center;color:#fff;font:16px sans-serif;opacity:.8}' +
+    '#bootOv .bootSkip{position:absolute;right:14px;top:calc(14px + env(safe-area-inset-top));padding:8px 14px;border-radius:16px;border:2px solid #fff6;background:#0006;color:#fff;font:bold 13px sans-serif;cursor:pointer;display:none}';
+  function mount() {
+    var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+    ov = document.createElement('div'); ov.id = 'bootOv';
+    ov.innerHTML = '<canvas></canvas><div class="bootWait">닌자가 몸을 푸는 중…</div><button class="bootSkip">건너뛰기 ▶▶</button>';
+    document.body.appendChild(ov);
+    cv = ov.querySelector('canvas'); c = cv.getContext('2d');
+    ov.querySelector('.bootSkip').addEventListener('click', function (e) { e.stopPropagation(); finish(); });
+    ov.addEventListener('pointerdown', function () { if (started && performance.now() - t0 > 600) finish(); });
+    addEventListener('keydown', function kd(e) { if (done) { removeEventListener('keydown', kd, true); return; } e.stopPropagation(); e.preventDefault(); if (started && performance.now() - t0 > 600) finish(); }, true);
+    size(); addEventListener('resize', size);
+  }
+  function size() { if (!cv) return; dpr = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; }
+  function tone(f, d, ty, v, s) { try { E('tone')(f, d, ty || 'triangle', v || 0.05, s || 0); } catch (_) {} }
+  var CAP = [[0.3, 1.9, '깊고 깊은 대나무 숲…'], [2.0, 3.7, '하찮지만 진지한 닌자가 있었으니…'], [3.8, 5.3, '오늘도 구름을 밟고 수련은 계속된다!']];
+  var END = 6.6, clouds = [];
+  for (var i = 0; i < 6; i++) clouds.push({ x: Math.random(), y: 0.15 + Math.random() * 0.35, s: 0.6 + Math.random() * 0.8, v: 0.01 + Math.random() * 0.02 });
+  function ease(x) { return x < 0 ? 0 : x > 1 ? 1 : 1 - Math.pow(1 - x, 3); }
+  function cloud(x, y, s, a) { c.save(); c.globalAlpha = a; c.fillStyle = '#ffffff'; c.beginPath(); c.arc(x, y, 18 * s, 0, 6.283); c.arc(x + 20 * s, y - 8 * s, 22 * s, 0, 6.283); c.arc(x + 42 * s, y, 18 * s, 0, 6.283); c.rect(x, y - 2 * s, 42 * s, 18 * s); c.fill(); c.restore(); }
+  var sfx = {};
+  function once(k, fn) { if (!sfx[k]) { sfx[k] = 1; fn(); } }
+  function frame(now) {
+    if (done) return;
+    var t = (now - t0) / 1000;
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var sky = c.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#0f1530'); sky.addColorStop(1, '#3a4a7a');
+    c.fillStyle = sky; c.fillRect(0, 0, W, H);
+    for (var s = 0; s < 40; s++) { c.globalAlpha = 0.3 + 0.3 * Math.sin(t * 2 + s); c.fillStyle = '#fff'; c.fillRect((s * 97) % W, (s * 53) % (H * 0.5), 2, 2); } c.globalAlpha = 1;
+    var ma = ease(t / 1.2); c.fillStyle = 'rgba(255,243,196,' + ma + ')'; c.shadowColor = '#fff3c4'; c.shadowBlur = 40 * ma; c.beginPath(); c.arc(W * 0.74, H * 0.2, Math.min(W, H) * 0.09, 0, 6.283); c.fill(); c.shadowBlur = 0;
+    clouds.forEach(function (k) { cloud(((k.x + t * k.v) % 1.2 - 0.1) * W, k.y * H, k.s, 0.25); });
+    var gy = H * 0.72, rise = ease(t / 1.3);
+    for (var b = 0; b < 14; b++) {                         // 대나무 실루엣
+      var bx = (b + 0.5) / 14 * W + Math.sin(b * 3.1) * 12, bh = H * (0.45 + 0.35 * Math.abs(Math.sin(b * 1.7)));
+      c.fillStyle = b % 2 ? '#1c2a3a' : '#22344a'; c.fillRect(bx - 5, gy - bh * rise, 10, bh * rise + 10);
+      for (var n = 1; n < 5; n++) { c.fillStyle = '#0f1a26'; c.fillRect(bx - 6, gy - bh * rise * n / 5, 12, 3); }
+    }
+    c.fillStyle = '#16202e'; c.fillRect(0, gy, W, H - gy);
+    // 닌자: 달려 들어와서 멈추고, 높이 뛰어 구름 위에 착지
+    var nx, ny = gy, st = 'idle', face = 1, run = t * 14;
+    if (t < 1.8) { nx = -40; } else if (t < 3.0) { var r = ease((t - 1.8) / 1.2); nx = -40 + (W * 0.5 + 40) * r; st = r < 0.98 ? 'run' : 'idle'; }
+    else nx = W * 0.5;
+    var cy = H * 0.4, cx = W * 0.5 - 21 * 1.6;
+    if (t > 3.9) {
+      var j = Math.min(1, (t - 3.9) / 0.7); once('jump', function () { tone(300, 0.25, 'square', 0.05, 600); });
+      ny = gy + (cy - gy) * ease(j) - Math.sin(j * Math.PI) * 60; st = j < 1 ? 'jump' : 'idle';
+      if (j >= 1) once('land', function () { tone(880, 0.12, 'triangle', 0.06, 200); });
+    }
+    if (t > 3.6) cloud(cx, cy + 10, 1.6, ease((t - 3.6) / 0.4));
+    if (nx > -30) {
+      c.fillStyle = 'rgba(0,0,0,.3)'; c.beginPath(); c.ellipse(nx, (t > 3.9 ? cy + 6 : gy + 2), 18, 4, 0, 0, 6.283); c.fill();
+      try { E('drawNinja')(c, E('curLook')(), { x: nx, y: ny, s: 1.6, face: face, st: st, run: run, t: t, idleT: t, sx: 1, sy: 1, vy: st === 'jump' ? -1 : 0, lean: st === 'run' ? 0.12 : 0 }); } catch (_) {}
+    }
+    CAP.forEach(function (k) {                             // 자막
+      if (t < k[0] || t > k[1]) return;
+      var a = Math.min(1, (t - k[0]) / 0.3, (k[1] - t) / 0.3);
+      c.globalAlpha = a; c.font = 'bold ' + Math.round(Math.min(22, W / 17)) + 'px sans-serif'; c.textAlign = 'center';
+      c.lineWidth = 5; c.strokeStyle = '#0b0f20'; c.strokeText(k[2], W / 2, H * 0.86); c.fillStyle = '#fff'; c.fillText(k[2], W / 2, H * 0.86); c.globalAlpha = 1;
+    });
+    if (t > 5.3) {                                         // 제목 등장
+      var tt = ease((t - 5.3) / 0.5), sc = 0.6 + 0.4 * tt + Math.sin(Math.min(1, (t - 5.3) / 0.5) * Math.PI) * 0.15;
+      once('title', function () { tone(523, 0.15, 'square', 0.05); setTimeout(function () { tone(784, 0.3, 'square', 0.05); }, 140); });
+      if (t < 5.55) { c.fillStyle = 'rgba(255,255,255,' + (1 - (t - 5.3) / 0.25) * 0.6 + ')'; c.fillRect(0, 0, W, H); }
+      c.save(); c.translate(W / 2, H * 0.2); c.scale(sc, sc); c.globalAlpha = tt; c.textAlign = 'center';
+      var fs = Math.round(Math.min(56, W / 7)); c.font = '900 ' + fs + 'px sans-serif'; c.lineWidth = 8; c.strokeStyle = '#0b0f20';
+      c.strokeText('구름발', 0, 0); c.fillStyle = '#ffffff'; c.fillText('구름발', 0, 0);
+      c.strokeText('닌자', 0, fs * 1.05); c.fillStyle = '#3ddc84'; c.fillText('닌자', 0, fs * 1.05); c.restore();
+    }
+    if (t >= END) return finish();
+    raf = requestAnimationFrame(frame);
+  }
+  function play() {
+    started = true; t0 = performance.now();
+    var w = ov.querySelector('.bootWait'); if (w) w.remove();
+    ov.querySelector('.bootSkip').style.display = 'block';
+    raf = requestAnimationFrame(frame);
+  }
+  function finish() {
+    if (done) return; done = true; cancelAnimationFrame(raf);
+    ov.style.opacity = '0'; ov.style.pointerEvents = 'none';
+    setTimeout(function () { if (ov) ov.remove(); removeEventListener('resize', size); }, 550);
+  }
+  var tStart = Date.now();
+  var w8 = setInterval(function () {
+    if (!ov) { if (document.body) mount(); else return; }
+    var ok = false;
+    try { ok = document.readyState === 'complete' && typeof E('mode') === 'string' && typeof E('drawNinja') === 'function' && !!document.getElementById('btnPlay'); } catch (_) {}
+    if (ok || Date.now() - tStart > 15000) { clearInterval(w8); ready = true; setTimeout(play, 150); }
+  }, 100);
+})();
