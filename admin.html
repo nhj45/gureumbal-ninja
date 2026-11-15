@@ -161,6 +161,11 @@ pre{background:#0b0e19;border:1px solid var(--line);border-radius:8px;padding:10
           <div class="actions"><button id="dCharBtn" class="primary">선물하기</button></div>
           <div class="muted" style="margin-top:6px;font-size:12px">상점에서 살 수 없는 캐릭터예요. 받으면 바로 "관리자 선물 도착!" 창이 뜨고 그 캐릭터로 바뀌어요.</div>
         </fieldset>
+        <fieldset><legend>스테이지 열어 주기</legend>
+          <div class="bar"><input id="dStage" type="number" min="1" max="500" placeholder="몇 번 스테이지까지 열까요? (1~500)"></div>
+          <div class="actions"><button id="dStageBtn" class="primary">열어 주기</button></div>
+          <div class="muted" style="margin-top:6px;font-size:12px">받으면 그 스테이지까지 바로 도전할 수 있어요 ("관리자 선물 도착!" 창이 떠요).</div>
+        </fieldset>
         <fieldset><legend>정지</legend>
           <div class="bar"><input id="dReason" maxlength="40" placeholder="사유 (선택, 본인에게 보여요)"></div>
           <div class="actions"><button id="dBan" class="danger">정지하기</button><button id="dUnban">정지 풀기</button></div>
@@ -319,6 +324,13 @@ $('dMsg').addEventListener('keydown', e => { if (e.key === 'Enter') $('dMsgBtn')
 $('dCharBtn').addEventListener('click', async () => {
   const u = USERS.find(x => x.uid === SEL); if (!u) return;
   try { await F.addDoc(F.collection(db, 'users', u.uid, 'gifts'), { coins: 0, char: $('dChar').value, msg: '', at: Date.now(), by: auth.currentUser.uid }); toast(u.nick + '에게 닌죠를 선물했어요'); }
+  catch (e) { toast('실패했어요: ' + (e.code || e), true); }
+});
+$('dStageBtn').addEventListener('click', async () => {
+  const u = USERS.find(x => x.uid === SEL); if (!u) return;
+  const n = Math.floor(Number($('dStage').value));
+  if (!(n >= 1 && n <= 500)) return toast('1 ~ 500 사이로 적어주세요', true);
+  try { await F.addDoc(F.collection(db, 'users', u.uid, 'gifts'), { coins: 0, stage: n, msg: '', at: Date.now(), by: auth.currentUser.uid }); toast(u.nick + '에게 스테이지 ' + n + '까지 열어 줬어요'); $('dStage').value = ''; }
   catch (e) { toast('실패했어요: ' + (e.code || e), true); }
 });
 $('dBan').addEventListener('click', async () => {
