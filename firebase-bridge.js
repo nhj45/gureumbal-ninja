@@ -1277,13 +1277,13 @@
       try {
         var now = performance.now(); combo = now - lastK < 2500 ? combo + 1 : 1; lastK = now;
         if (e && e.gold && !e.goldPaid) {
-          e.goldPaid = true; E('bonusCoins += 10');
-          E('floatText')(x, y - 44, '황금 적! +10', '#ffd84a', 18); E('sparks')(x, y, 26, '#ffd84a', 220);
+          e.goldPaid = true; E('bonusCoins += 3');
+          E('floatText')(x, y - 44, '황금 적! +3', '#ffd84a', 18); E('sparks')(x, y, 26, '#ffd84a', 220);
           E('kick')(6, 0.05, 0.06); try { E('SFX').coin(10); } catch (_) {}
         }
         if (combo >= 3) {
-          var b = Math.min(combo - 2, 10); E('bonusCoins += ' + b);
-          E('floatText')(x, y - 62, combo + '연속 처치! +' + b, '#7df9ff', 14 + Math.min(combo, 8));
+          var b = combo % 5 === 0 ? 1 : 0; if (b) E('bonusCoins += 1');          // 5연속마다 엽전 1개
+          E('floatText')(x, y - 62, combo + '연속 처치!' + (b ? ' +1' : ''), '#7df9ff', 14 + Math.min(combo, 8));
           E('tone')(440 + combo * 90, 0.14, 'triangle', 0.06, 260);
         }
         if (combo === 5) startFever();
@@ -2017,8 +2017,8 @@
   var FEAT = { spring: '스프링', move: '움직이는 발판', wall: '벽 타기', lift: '오르내리는 발판', crumble: '무너지는 발판', spike: '가시', enemy: '몬스터', fly: '까마귀' };
   function rng(seed) { var s = (seed >>> 0) || 7; return function () { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
   function profile(idx) {
-    var R = rng(idx * 2654435761 ^ 0x5bd1e995), d = Math.min(1, (idx - 5) / 380);
-    var w = { spring: 0.02 + R() * 0.08, move: R() * 0.14, wall: R() * 0.12, lift: R() * 0.1, crumble: (0.05 + R() * 0.35) * (0.4 + d), spike: R() < 0.25 ? 0 : (0.05 + R() * 0.25) * (0.3 + d), enemy: (0.08 + R() * 0.3) * (0.5 + d), fly: R() < 0.3 ? 0 : R() * 0.2 * (0.3 + d) };
+    var R = rng(idx * 2654435761 ^ 0x5bd1e995), d = Math.min(1, (idx - 5) / 520) * 0.85;   // 난이도는 천천히 오르고, 끝까지 가도 조금 덜 어려워요
+    var w = { spring: 0.02 + R() * 0.08, move: R() * 0.14, wall: R() * 0.12, lift: R() * 0.1, crumble: (0.04 + R() * 0.25) * (0.35 + d), spike: R() < 0.3 ? 0 : (0.04 + R() * 0.18) * (0.3 + d), enemy: (0.06 + R() * 0.22) * (0.5 + d), fly: R() < 0.35 ? 0 : R() * 0.15 * (0.3 + d) };
     var keys = Object.keys(w).sort(function (a, b) { return w[b] - w[a]; });
     return { R: R, d: d, w: w, top: keys.slice(0, 3), theme: THEME_KEYS[Math.floor(R() * 5)] , adj: ADJ[Math.floor(R() * ADJ.length)], boss: idx % 25 === 24 };
   }
@@ -2055,15 +2055,15 @@
         L = st1; Rr = st1 + 2; y += 9; continue;
       }
       if (y > 10 && r < (acc += w.spike) && (L - 1 >= 4 || Rr <= 6)) {   // 가시 바닥: 벽 쪽은 가시, 안쪽 끝만 안전해요
-        var safe = d > 0.6 ? 2 : 3, ny2 = y + 3, a0, a1, s0;
+        var safe = d > 0.75 ? 2 : 3, ny2 = y + 3, a0, a1, s0;
         if (L - 1 >= 4) { a0 = 1; a1 = Math.min(L - 1, 7); s0 = a1 - safe + 1; }      // 왼쪽 벽에 붙은 가시 바닥 (안전한 칸은 오른쪽 끝)
         else { a0 = Math.max(Rr + 1, 4); a1 = 10; s0 = a0; }                              // 오른쪽 벽에 붙은 가시 바닥 (안전한 칸은 왼쪽 끝)
         for (k = a0; k <= a1; k++) { set(ny2, k, '#'); if (k < s0 || k >= s0 + safe) set(ny2 + 1, k, '^'); }
         if (free(ny2 + 1, s0)) set(ny2 + 1, s0, 'o');
         L = s0; Rr = s0 + safe - 1; y = ny2; continue;
       }
-      var len = 2 + Math.floor(R() * (3 - Math.round(d)));
-      var gap = R() < 0.2 + 0.35 * d ? 4 : 3, ny = y + gap;
+      var len = 2 + Math.floor(R() * (3 - Math.round(d * 0.8)));
+      var gap = R() < 0.12 + 0.28 * d ? 4 : 3, ny = y + gap;
       var minS = Math.max(1, L - 2 - len + 1), maxS = Math.min(10 - len + 1, Rr + 3);
       var st = minS + Math.floor(R() * (maxS - minS + 1));
       var ch = R() < w.crumble ? 'X' : '=';
@@ -2147,4 +2147,61 @@
       } catch (e) { document.getElementById('sheetBody').innerHTML = '<div class="note">' + esc((e && e.msg) || '랭킹을 불러오지 못했어요') + '</div>'; }
     };
   }, 300);
+})();
+
+// ── 난이도 조금 낮추기: 스프링이 더 높이 튀고, 스프링 가는 길에 디딤판을 놓아요 ──
+(function () {
+  var E = function (s) { return (0, eval)(s); };
+  var hook = setInterval(function () {
+    var S, ds; try { S = E('STAGES'); ds = E('doSpring'); } catch (_) { return; }
+    if (!S || S.length < 5 || typeof ds !== 'function') return; clearInterval(hook);
+    function put(si, r, c, ch) { var m = S[si].map; if (m[r] && m[r][c] === '.') m[r] = m[r].slice(0, c) + ch + m[r].slice(c + 1); }
+    put(1, 23, 4, '='); put(1, 23, 5, '=');                 // 2스테이지: 스프링 가기 전 디딤판
+    put(2, 41, 3, '='); put(2, 41, 4, '=');                 // 3스테이지: 스프링 가기 전 디딤판
+    put(3, 40, 7, '='); put(3, 40, 8, '=');                 // 4스테이지: 높은 구간 사이 디딤판
+    put(3, 49, 6, '='); put(3, 49, 7, '=');
+    put(4, 27, 6, '=');                                     // 5스테이지: 스프링 옆 디딤판
+    window.doSpring = function (p) {
+      var r = ds.apply(this, arguments);
+      try { if (p && p.vy < 0) p.vy *= 1.15; } catch (_) {}  // 스프링 점프 15% 더 높게
+      return r;
+    };
+  }, 200);
+})();
+
+// ── 엽전 덜 벌리게: 스테이지 · 무한의 탑에서 받는 엽전을 40%로 줄여요 ──
+(function () {
+  var E = function (s) { return (0, eval)(s); };
+  var RATE = 0.4, depth = 0, pending = null;
+  function wrapModal() {                                      // 결과 창이 나중에 열려도 줄어든 엽전 수로 보여요
+    var f; try { f = E('openModal'); } catch (_) { return; } if (typeof f !== 'function' || f.__cut) return;
+    var g = function (html) {
+      if (pending && Date.now() - pending.at < 8000 && typeof html === 'string' && html.indexOf('earn') >= 0) {
+        html = html.replace(/(class="earn"[^>]*>[\s\S]*?\+\s*)\d+/, '$1' + pending.keep); pending = null;
+      }
+      return f.call(this, html);
+    };
+    g.__cut = true; window.openModal = g;
+  }
+  function wrap(name) {
+    var f; try { f = E(name); } catch (_) { return; } if (typeof f !== 'function' || f.__cut) return;
+    var g = function () {
+      var sv = E('save'), before = sv.coins || 0, outer = depth === 0, r;
+      depth++;
+      try { r = f.apply(this, arguments); } finally { depth--; }
+      if (!outer) return r;                                  // 여러 번 감싸져도 한 번만 줄여요
+      try {
+        var got = (sv.coins || 0) - before;
+        if (got > 0) {
+          var keep = Math.max(1, Math.round(got * RATE)); sv.coins = before + keep;
+          try { E('persist')(); E('refreshLobby')(); } catch (_) {}
+          pending = { keep: keep, at: Date.now() };
+          setTimeout(function () { var el = document.querySelector('#modal .earn'); if (el && pending) el.innerHTML = el.innerHTML.replace(/\+\s*\d+/, '+' + keep); }, 0);
+        }
+      } catch (_) {}
+      return r;
+    };
+    g.__cut = true; window[name] = g;
+  }
+  setInterval(function () { wrap('clearStage'); wrap('towerOver'); wrapModal(); }, 1000);   // 다른 기능이 나중에 감싸도 맨 바깥에서 줄여요
 })();
