@@ -2019,8 +2019,14 @@
   function profile(idx) {
     var R = rng(idx * 2654435761 ^ 0x5bd1e995), d = Math.min(1, (idx - 5) / 600) * 0.85;   // 300스테이지까지 3시간쯤 걸리도록 천천히 어려워져요
     var w = { spring: 0.02 + R() * 0.08, move: R() * 0.14, wall: R() * 0.12, lift: R() * 0.1, crumble: (0.04 + R() * 0.25) * (0.35 + d), spike: R() < 0.3 ? 0 : (0.04 + R() * 0.18) * (0.3 + d), enemy: (0.06 + R() * 0.22) * (0.5 + d), fly: R() < 0.35 ? 0 : R() * 0.15 * (0.3 + d) };
+    // 판마다 '주인공 장애물'을 하나 정해서 그 장애물이 잔뜩 나오게 해요
+    var ARCH = ['stairs', 'spring', 'move', 'wall', 'lift', 'crumble', 'spike', 'enemy', 'fly'], arch = ARCH[Math.floor(R() * ARCH.length)];
+    if (arch === 'stairs') { Object.keys(w).forEach(function (k) { w[k] *= 0.3; }); }
+    else { Object.keys(w).forEach(function (k) { if (k !== arch) w[k] *= 0.55; }); w[arch] = Math.max(w[arch], 0.28 + R() * 0.14); }
+    var MODS = ['night', 'wind', 'lowgrav', 'rain', 'snow', 'fog', 'timer', 'gold', 'none', 'none', 'none'];
+    var mod = idx % 25 === 24 ? 'none' : MODS[Math.floor(R() * MODS.length)];
     var keys = Object.keys(w).sort(function (a, b) { return w[b] - w[a]; });
-    return { R: R, d: d, w: w, top: keys.slice(0, 3), theme: THEME_KEYS[Math.floor(R() * 5)] , adj: ADJ[Math.floor(R() * ADJ.length)], boss: idx % 25 === 24 };
+    return { R: R, d: d, w: w, top: keys.slice(0, 3), arch: arch, mod: mod, hue: Math.floor(R() * 360), theme: THEME_KEYS[Math.floor(R() * 5)] , adj: ADJ[Math.floor(R() * ADJ.length)], boss: idx % 25 === 24 };
   }
   function genStage(idx) {
     var pf = profile(idx), R = pf.R, d = pf.d, w = pf.w;
@@ -2069,7 +2075,7 @@
       var ch = R() < w.crumble ? 'X' : '=';
       for (k = 0; k < len; k++) set(ny, st + k, ch);
       if (ch === '=' && len >= 3 && R() < w.enemy) set(ny + 1, st + 1, 'EKQ'[Math.floor(R() * 3)]);
-      if (R() < 0.6) { var cc = st + Math.floor(R() * len); if (free(ny + 1, cc)) set(ny + 1, cc, 'o'); }
+      if (R() < (pf.mod === 'gold' ? 1 : 0.6)) { for (var cn = 0; cn < (pf.mod === 'gold' ? len : 1); cn++) { var cc = pf.mod === 'gold' ? st + cn : st + Math.floor(R() * len); if (free(ny + 1, cc)) set(ny + 1, cc, 'o'); } }
       if (y > 14 && R() < w.fly) { var cf = 1 + Math.floor(R() * 9); if (free(ny - 1, cf)) set(ny - 1, cf, 'B'); }
       if (R() < 0.04) { var cu = st + Math.floor(R() * len); if (free(ny + 2, cu)) set(ny + 2, cu, 'UHF'[Math.floor(R() * 3)]); }
       if (ch === '=' && ny - lastCP > 26 && len >= 2) { var ccp = st + Math.floor(len / 2); if (free(ny + 1, ccp)) { set(ny + 1, ccp, 'C'); lastCP = ny; } }
@@ -2095,7 +2101,9 @@
     var S; try { S = E('STAGES'); } catch (_) { return; } if (!S || !S.length) return; clearInterval(hook);
     for (var i = S.length; i < MAX; i++) (function (idx) {
       var pf = profile(idx), place = PLACE[pf.theme][Math.floor(pf.R() * 4)], cache = null;
-      var o = { name: pf.adj + ' ' + place, sub: (pf.boss ? '보스 · ' : '') + pf.top.filter(function (k) { return pf.w[k] > 0.02; }).map(function (k) { return FEAT[k]; }).join(' · '), theme: pf.theme, hints: [] };
+      var MODN = { night: '깜깜한 밤', wind: '거센 바람', lowgrav: '달 중력', rain: '비', snow: '눈', fog: '짙은 안개', timer: '시간 제한', gold: '엽전 비' };
+      var main = pf.arch === 'stairs' ? '발판 오르기' : FEAT[pf.arch] + ' 투성이';
+      var o = { name: pf.adj + ' ' + place, sub: (pf.boss ? '보스 · ' : '') + (MODN[pf.mod] ? '[' + MODN[pf.mod] + '] ' : '') + main, theme: pf.theme, hints: [], mod: pf.mod, hue: pf.hue };
       Object.defineProperty(o, 'map', { get: function () { if (!cache) cache = genStage(idx); return cache; }, enumerable: true });
       S.push(o);
     })(i);
@@ -2249,4 +2257,87 @@
     window.resetBoss = function () { if (!over && lives > 0 && lives < MAX) return; return rb.apply(this, arguments); };   // 목숨이 남아 있으면 보스 체력은 그대로
   }, 300);
   (function tick() { try { hud(); } catch (_) {} requestAnimationFrame(tick); })();
+})();
+
+// ── 판마다 다른 느낌: 날씨·규칙(밤, 바람, 달 중력, 비, 눈, 안개, 시간 제한)과 색감 ──
+(function () {
+  var E = function (s) { return (0, eval)(s); };
+  var cur = null, t0 = 0, wind = 0, windT = 0, drops = [], timeLeft = 0, timerOver = false, last = 0;
+  function S() { try { var i = E('stageIdx'), st = E('STAGES')[i]; return (!E('ENDLESS') && st && i >= 5) ? st : null; } catch (_) { return null; } }
+  function toScreen(x, y) { var W = E('W'), vH = E('viewH'), cam = E('cam'), z = 1 + (E('zoomP') || 0); return [(x - W / 2) * z + W / 2, (y - vH * 0.5 - cam) * z + vH * 0.5]; }
+  var LABEL = { night: '깜깜한 밤 · 내 주변만 보여요', wind: '거센 바람 · 바람에 밀려요', lowgrav: '달 중력 · 몸이 가벼워요', rain: '비 오는 날', snow: '눈 오는 날', fog: '짙은 안개', timer: '시간 제한! 늦으면 처음부터', gold: '엽전 비! 엽전이 잔뜩' };
+  function startMod() {
+    var st = S(); cur = st ? st.mod : null; drops = []; wind = 0; windT = 0; timerOver = false;
+    if (cur === 'timer') { try { timeLeft = Math.round(E('ROWS') * 0.6 + 15); } catch (_) { timeLeft = 90; } }
+    if (cur && LABEL[cur]) setTimeout(function () { try { E('showToast')(LABEL[cur], '#ffe27a'); } catch (_) {} }, 900);
+  }
+  function timeUp() {
+    try {
+      E("mode = 'clear'"); E('show')('ctrl', false); E('show')('pauseBtn', false);
+      var ic = E('ic'), i = E('stageIdx');
+      E('openModal')('<div class="msub" style="margin:0">STAGE ' + (i + 1) + ' · ' + E('STAGES')[i].name + '</div><div class="rank" style="color:#ff6b6b">시간 초과</div><div class="msub">조금만 더 빨리! 다시 도전해요.</div>' +
+        '<div class="row2"><button class="go alt" data-act="retry">' + ic('retry') + '다시</button><button class="go ghost" data-act="lobby">' + ic('home') + '로비</button></div>');
+    } catch (_) {}
+  }
+  // 몸에 직접 주는 효과 (바람, 달 중력, 시간 제한)
+  (function phys(now) {
+    var dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
+    try {
+      if (cur && E('mode') === 'play') {
+        var p = E('P');
+        if (p && !p.dead) {
+          if (cur === 'lowgrav' && !p.onGround) p.vy -= 1800 * 0.35 * dt;
+          if (cur === 'wind') {
+            windT -= dt; if (windT <= 0) { windT = 3 + Math.random() * 3; wind = (Math.random() < 0.5 ? -1 : 1) * (45 + Math.random() * 35); }
+            var nx = p.x + wind * dt, tx = Math.floor((wind > 0 ? nx + p.w + 1 : nx - 1) / E('T')), solid = E('isSolid');
+            if (!solid(tx, Math.floor((p.y + 4) / E('T'))) && !solid(tx, Math.floor((p.y + p.h - 4) / E('T')))) p.x = nx;
+          }
+        }
+        if (cur === 'timer' && !timerOver) { timeLeft -= dt; if (timeLeft <= 0) { timerOver = true; timeUp(); } }
+      }
+    } catch (_) {}
+    requestAnimationFrame(phys);
+  })(performance.now());
+  // 화면에 그리는 효과
+  function overlay() {
+    var st = S(); if (!st) return;
+    var c = E('ctx'), W = E('W'), H = E('viewH'), b = E('dpr') * E('scale'), p = E('P'), tm = E('time');
+    c.save(); c.setTransform(b, 0, 0, b, 0, 0);
+    if (typeof st.hue === 'number') { c.globalCompositeOperation = 'soft-light'; c.fillStyle = 'hsla(' + st.hue + ',70%,50%,.35)'; c.fillRect(0, 0, W, H); c.globalCompositeOperation = 'source-over'; }
+    var m = st.mod;
+    if (m === 'rain' || m === 'snow') {
+      var want = m === 'rain' ? 90 : 70;
+      while (drops.length < want) drops.push({ x: Math.random() * W, y: Math.random() * H, v: m === 'rain' ? 500 + Math.random() * 300 : 30 + Math.random() * 40, r: 1 + Math.random() * 2, ph: Math.random() * 6 });
+      c.strokeStyle = 'rgba(180,210,255,.55)'; c.fillStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 1.2;
+      drops.forEach(function (d) {
+        d.y += d.v / 60; if (m === 'snow') d.x += Math.sin(tm * 1.5 + d.ph) * 0.4; if (d.y > H) { d.y = -10; d.x = Math.random() * W; }
+        if (m === 'rain') { c.beginPath(); c.moveTo(d.x, d.y); c.lineTo(d.x - 3, d.y + 12); c.stroke(); } else { c.beginPath(); c.arc(d.x, d.y, d.r, 0, 6.283); c.fill(); }
+      });
+    }
+    if (m === 'wind') {
+      c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = 1.5;
+      for (var i = 0; i < 14; i++) { var yy = (i * 61) % H, xx = ((tm * Math.abs(wind) * 3 + i * 97) % (W + 80)) - 40; if (wind < 0) xx = W - xx; c.beginPath(); c.moveTo(xx, yy); c.lineTo(xx - Math.sign(wind || 1) * 30, yy); c.stroke(); }
+      c.fillStyle = 'rgba(0,0,0,.4)'; c.fillRect(W / 2 - 34, 92, 68, 20); c.fillStyle = '#fff'; c.font = 'bold 12px sans-serif'; c.textAlign = 'center'; c.fillText(wind > 0 ? '바람 →→' : '←← 바람', W / 2, 106);
+    }
+    if (m === 'fog') {
+      for (var f = 0; f < 3; f++) { var fy = ((tm * 12 + f * H / 3) % (H + 120)) - 60, g2 = c.createLinearGradient(0, fy - 60, 0, fy + 60); g2.addColorStop(0, 'rgba(230,235,245,0)'); g2.addColorStop(0.5, 'rgba(230,235,245,.45)'); g2.addColorStop(1, 'rgba(230,235,245,0)'); c.fillStyle = g2; c.fillRect(0, fy - 60, W, 120); }
+      c.fillStyle = 'rgba(220,225,235,.18)'; c.fillRect(0, 0, W, H);
+    }
+    if (m === 'night' && p) {
+      var sp = toScreen(p.x + p.w / 2, p.y + p.h / 2), g = c.createRadialGradient(sp[0], sp[1], 40, sp[0], sp[1], 150);
+      g.addColorStop(0, 'rgba(4,6,18,0)'); g.addColorStop(1, 'rgba(4,6,18,.9)'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+    }
+    if (m === 'timer' && E('mode') === 'play') {
+      var tl = Math.max(0, timeLeft), red = tl < 10;
+      c.fillStyle = red ? 'rgba(200,30,40,.75)' : 'rgba(0,0,0,.5)'; c.fillRect(W / 2 - 46, 92, 92, 24);
+      c.fillStyle = '#fff'; c.font = 'bold 15px sans-serif'; c.textAlign = 'center'; c.fillText('⏱ ' + Math.ceil(tl) + '초', W / 2, 109);
+    }
+    c.restore();
+  }
+  var hook = setInterval(function () {
+    var st, rg; try { st = E('startStage'); rg = E('renderGame'); } catch (_) { return; }
+    if (typeof st !== 'function' || typeof rg !== 'function') return; clearInterval(hook);
+    window.startStage = function () { var r = st.apply(this, arguments); try { startMod(); } catch (_) {} return r; };
+    window.renderGame = function () { var r = rg.apply(this, arguments); try { overlay(); } catch (_) {} return r; };
+  }, 300);
 })();
