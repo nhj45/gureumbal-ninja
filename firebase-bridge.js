@@ -180,7 +180,8 @@
   var SHIELD = '<svg class="ic" viewBox="0 0 24 24" width="24" height="24"><path d="M12 2.5 4 5.6v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10v-6z" fill="#5b6cff" stroke="#141418" stroke-width="2" stroke-linejoin="round"/><path d="m12 7.2 1.5 3 3.3.5-2.4 2.3.6 3.3-3-1.6-3 1.6.6-3.3-2.4-2.3 3.3-.5z" fill="#ffd84a" stroke="#141418" stroke-width="1.3" stroke-linejoin="round"/></svg>';
   var css = document.createElement('style');
   css.textContent = [
-    '#btnAdmin{display:flex;align-items:center;justify-content:center;padding:0;background:#fff3c4!important;margin-left:auto;margin-right:8px}',
+    '#btnAdmin{display:flex;align-items:center;justify-content:center;padding:0;background:#fff3c4!important;margin-left:auto;margin-right:0}',
+    '#lobby .topbar #btnSet{margin-left:auto}', '#lobby .topbar #btnAdmin + #btnSet{margin-left:8px}',
     '#btnAdmin svg{width:26px;height:26px}',
     '.adm-bar{display:flex;gap:6px;margin-bottom:10px}',
     '.adm-in{flex:1;min-width:0;font:inherit;font-size:15px;padding:9px 12px;border:3px solid #141418;border-radius:12px;background:#fff;color:#2b2b3a}',
@@ -253,6 +254,14 @@
           try { g('SFX').buy(); } catch (_) {}
           continue;
         }
+        var stN = Math.floor(Number(v.stage) || 0);
+        if (stN > 0) {                                                  // 스테이지 열어 주기
+          var sv1 = g('save'), maxS = g('STAGES').length; stN = Math.min(stN, maxS);
+          if (stN > (sv1.unlocked || 1)) { sv1.unlocked = stN; save2(); try { g('refreshLobby')(); } catch (_) {} }
+          tellPlayer(ICON_GIFT, '관리자 선물 도착!', ['스테이지 <b>' + stN + '</b>까지 열렸어요!'].concat(v.msg ? [h(v.msg)] : []));
+          try { g('SFX').buy(); } catch (_) {}
+          continue;
+        }
         if (c > 0 && c <= 1000000) { total += c; if (v.msg) note = v.msg; }
         else if (v.msg) msgs.push(String(v.msg).slice(0, 120));      // 엽전 없이 메시지만 온 것
       }
@@ -319,6 +328,8 @@
             '<input class="adm-in" id="admMsg" maxlength="80" placeholder="메시지 (엽전과 같이 가거나, 메시지만 보낼 수 있어요)" style="flex:1 1 100%">' +
             '<button class="adm-b gray" data-give="msg" style="flex:1 1 100%">메시지만 보내기</button>' +
             '<button class="adm-b" data-give="ninjo" style="flex:1 1 100%;background:#2b3a6b;color:#fff">닌죠 캐릭터 선물하기</button>' +
+            '<input class="adm-in" id="admStage" type="number" inputmode="numeric" min="1" max="500" placeholder="스테이지 번호 (1~500)" style="flex:1 1 120px">' +
+            '<button class="adm-b" data-give="stage" style="background:#2f9e5a;color:#fff">스테이지 열어 주기</button>' +
           '</div>'
         : '';
       return '<div class="adm-row' + (b ? ' banned' : '') + '" data-uid="' + r.uid + '">' +
@@ -336,6 +347,8 @@
       '<div class="adm-row" style="margin-bottom:10px"><div class="adm-top"><div class="adm-name">내 코인 <b id="admMyC">' + myC + '</b></div></div>' +
         '<div class="adm-more"><button class="adm-b" data-self="1000">+1000</button><button class="adm-b" data-self="10000">+10000</button><button class="adm-b" data-self="100000">+100000</button>' +
         '<input class="adm-in" id="admSelf" type="number" inputmode="numeric" placeholder="직접 입력" style="flex:1 1 90px"><button class="adm-b blue" data-self="custom">넣기</button></div></div>' +
+      '<div class="adm-row" style="margin-bottom:10px"><div class="adm-top"><div class="adm-name">내 스테이지 <b>' + Math.min((g('save').unlocked || 1), g('STAGES').length) + '</b> / ' + g('STAGES').length + '</div></div>' +
+        '<div class="adm-more"><input class="adm-in" id="admMyStage" type="number" inputmode="numeric" placeholder="열 스테이지 번호" style="flex:1 1 120px"><button class="adm-b" data-mystage="1" style="background:#2f9e5a;color:#fff">열기</button><button class="adm-b" data-mystage="all" style="background:#2f9e5a;color:#fff">전부 열기</button></div></div>' +
       '<a class="adm-b blue" href="admin.html" target="_blank" style="display:block;text-align:center;text-decoration:none;margin-bottom:10px">관리자 페이지 열기 (이벤트 · 공지 · 선물 뿌리기)</a>' +
       '<div class="adm-bar"><input class="adm-in" id="admQ" placeholder="아이디로 찾기 (비우면 최근 100명)" value="' + h(sv) + '"><button class="adm-b blue" id="admGo">찾기</button></div>' +
       (note ? '<div class="note" style="margin:0 0 10px;color:#2f7fd6">' + h(note) + '</div>' : '') +
@@ -365,6 +378,14 @@
         await loadAdmin(x, document.getElementById('admQ').value.trim()); admOpen = null; admArm = null; renderAdmin();
         return;
       }
+      if (t.dataset.mystage) {
+        var mx = g('STAGES').length, want = t.dataset.mystage === 'all' ? mx : Math.floor(Number(document.getElementById('admMyStage').value));
+        if (!(want >= 1 && want <= mx)) { renderAdmin('스테이지 번호를 1 ~ ' + mx + ' 사이로 적어주세요'); return; }
+        var svS = g('save'); svS.unlocked = Math.max(svS.unlocked || 1, want);
+        try { g('persist')(); g('refreshLobby')(); g('SFX').buy(); } catch (_) {}
+        renderAdmin('내 스테이지를 ' + svS.unlocked + '까지 열었어요');
+        return;
+      }
       if (t.dataset.self) {
         var sn = t.dataset.self === 'custom' ? Math.floor(Number(document.getElementById('admSelf').value)) : Number(t.dataset.self);
         if (!(sn > 0 && sn <= 10000000)) { renderAdmin('1 ~ 10000000 사이로 적어주세요'); return; }
@@ -381,6 +402,13 @@
         if (give === 'ninjo') {
           await F.addDoc(F.collection(db, 'users', uid, 'gifts'), { coins: 0, char: 'ninjo', msg: mtx, at: Date.now(), by: x.auth.currentUser.uid });
           admOpen = null; renderAdmin(r.nick + '에게 닌죠를 선물했어요');
+          return;
+        }
+        if (give === 'stage') {
+          var sN = Math.floor(Number((document.getElementById('admStage') || {}).value));
+          if (!(sN >= 1 && sN <= 500)) { renderAdmin('스테이지 번호를 1 ~ 500 사이로 적어주세요'); return; }
+          await F.addDoc(F.collection(db, 'users', uid, 'gifts'), { coins: 0, stage: sN, msg: mtx, at: Date.now(), by: x.auth.currentUser.uid });
+          admOpen = null; renderAdmin(r.nick + '에게 스테이지 ' + sN + '까지 열어 줬어요');
           return;
         }
         if (give === 'msg') {
@@ -1978,4 +2006,145 @@
     window.loadStage = function () { var r = f.apply(this, arguments); clean(); return r; };
   }, 300);
   (function tick() { clean(); requestAnimationFrame(tick); })();   // 무한의 탑처럼 나중에 생기는 것도 바로 지워요
+})();
+
+// ── 스테이지 500개: 6번부터는 번호마다 다른 맵과 장애물을 만들어요 (같은 번호는 늘 같은 맵) ──
+(function () {
+  var E = function (s) { return (0, eval)(s); };
+  var MAX = 500, THEME_KEYS = ['bamboo', 'roof', 'fall', 'castle', 'summit'];
+  var PLACE = { bamboo: ['대숲', '죽림', '대나무 길', '푸른 숲'], roof: ['기와 마을', '지붕길', '처마 거리', '저잣거리'], fall: ['폭포', '절벽', '물안개 계곡', '통나무 다리'], castle: ['성벽', '망루', '달빛 성채', '돌계단'], summit: ['봉우리', '구름길', '하늘 정상', '바람 고개'] };
+  var ADJ = ['고요한', '바람 부는', '안개 낀', '달빛', '비 내리는', '붉은', '깊은', '험한', '얼어붙은', '타오르는', '잊혀진', '흔들리는', '어두운', '반짝이는', '끝없는'];
+  var FEAT = { spring: '스프링', move: '움직이는 발판', wall: '벽 타기', lift: '오르내리는 발판', crumble: '무너지는 발판', spike: '가시', enemy: '몬스터', fly: '까마귀' };
+  function rng(seed) { var s = (seed >>> 0) || 7; return function () { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+  function profile(idx) {
+    var R = rng(idx * 2654435761 ^ 0x5bd1e995), d = Math.min(1, (idx - 5) / 380);
+    var w = { spring: 0.02 + R() * 0.08, move: R() * 0.14, wall: R() * 0.12, lift: R() * 0.1, crumble: (0.05 + R() * 0.35) * (0.4 + d), spike: R() < 0.25 ? 0 : (0.05 + R() * 0.25) * (0.3 + d), enemy: (0.08 + R() * 0.3) * (0.5 + d), fly: R() < 0.3 ? 0 : R() * 0.2 * (0.3 + d) };
+    var keys = Object.keys(w).sort(function (a, b) { return w[b] - w[a]; });
+    return { R: R, d: d, w: w, top: keys.slice(0, 3), theme: THEME_KEYS[Math.floor(R() * 5)] , adj: ADJ[Math.floor(R() * ADJ.length)], boss: idx % 25 === 24 };
+  }
+  function genStage(idx) {
+    var pf = profile(idx), R = pf.R, d = pf.d, w = pf.w;
+    var N = 58 + Math.floor(Math.min(90, idx * 0.22)) + Math.floor(R() * 14), rows = [], i, k;
+    for (i = 0; i < N; i++) rows.push(('#' + '..........' + '#').split(''));
+    rows[0] = '############'.split('');
+    var set = function (r, c, ch) { if (r > 0 && r < N && c >= 1 && c <= 10) rows[r][c] = ch; };
+    var free = function (r, c) { return r > 0 && r < N && c >= 1 && c <= 10 && rows[r][c] === '.'; };
+    set(1, 3, 'P'); set(1, 6, 'o'); set(1, 8, 'o');
+    var y = 0, L = 1, Rr = 10, lastCP = 0, top = pf.boss ? N - 14 : N - 6;
+    var scrollAt = [Math.floor(top * 0.3), Math.floor(top * 0.6), Math.floor(top * 0.88)], sIdx = 0;
+    while (y < top - 5) {
+      var r = R(), acc = 0;
+      if (y > 8 && r < (acc += w.spring)) {
+        var c0 = Math.max(1, Math.min(10, L + Math.floor(R() * (Rr - L + 1))));
+        set(y + 3, c0, 'T'); for (k = 2; k <= 6; k += 2) set(y + 3 + k, c0, 'o');
+        var st0 = Math.max(1, Math.min(8, c0 - 1)); for (k = 0; k < 3; k++) set(y + 12, st0 + k, '=');
+        L = st0; Rr = st0 + 2; y += 12; continue;
+      }
+      if (y > 12 && r < (acc += w.move)) { set(y + 3, 1 + Math.floor(R() * 8), 'M'); if (R() < 0.7) set(y + 5, 1 + Math.floor(R() * 10), 'o'); L = 1; Rr = 10; y += 3; continue; }
+      if (y > 16 && r < (acc += w.wall) && L <= 5) {
+        for (k = 1; k <= 3; k++) set(y + 3, k, '=');
+        for (k = 1; k <= 9; k++) set(y + 3 + k, 3, '#');
+        set(y + 6, 1, 'o'); set(y + 9, 2, 'o');
+        for (k = 1; k <= 4; k++) set(y + 13, k, '=');
+        L = 1; Rr = 4; y += 13; continue;
+      }
+      if (y > 20 && r < (acc += w.lift)) {
+        var c1 = Math.max(1, Math.min(9, L + Math.floor(R() * Math.max(1, Rr - L))));
+        set(y + 3, c1, 'N'); set(y + 5, c1, 'o');
+        var st1 = Math.max(1, Math.min(8, c1 + (R() < 0.5 ? -3 : 2))); for (k = 0; k < 3; k++) set(y + 9, st1 + k, '=');
+        L = st1; Rr = st1 + 2; y += 9; continue;
+      }
+      if (y > 10 && r < (acc += w.spike) && (L - 1 >= 4 || Rr <= 6)) {   // 가시 바닥: 벽 쪽은 가시, 안쪽 끝만 안전해요
+        var safe = d > 0.6 ? 2 : 3, ny2 = y + 3, a0, a1, s0;
+        if (L - 1 >= 4) { a0 = 1; a1 = Math.min(L - 1, 7); s0 = a1 - safe + 1; }      // 왼쪽 벽에 붙은 가시 바닥 (안전한 칸은 오른쪽 끝)
+        else { a0 = Math.max(Rr + 1, 4); a1 = 10; s0 = a0; }                              // 오른쪽 벽에 붙은 가시 바닥 (안전한 칸은 왼쪽 끝)
+        for (k = a0; k <= a1; k++) { set(ny2, k, '#'); if (k < s0 || k >= s0 + safe) set(ny2 + 1, k, '^'); }
+        if (free(ny2 + 1, s0)) set(ny2 + 1, s0, 'o');
+        L = s0; Rr = s0 + safe - 1; y = ny2; continue;
+      }
+      var len = 2 + Math.floor(R() * (3 - Math.round(d)));
+      var gap = R() < 0.2 + 0.35 * d ? 4 : 3, ny = y + gap;
+      var minS = Math.max(1, L - 2 - len + 1), maxS = Math.min(10 - len + 1, Rr + 3);
+      var st = minS + Math.floor(R() * (maxS - minS + 1));
+      var ch = R() < w.crumble ? 'X' : '=';
+      for (k = 0; k < len; k++) set(ny, st + k, ch);
+      if (ch === '=' && len >= 3 && R() < w.enemy) set(ny + 1, st + 1, 'EKQ'[Math.floor(R() * 3)]);
+      if (R() < 0.6) { var cc = st + Math.floor(R() * len); if (free(ny + 1, cc)) set(ny + 1, cc, 'o'); }
+      if (y > 14 && R() < w.fly) { var cf = 1 + Math.floor(R() * 9); if (free(ny - 1, cf)) set(ny - 1, cf, 'B'); }
+      if (R() < 0.04) { var cu = st + Math.floor(R() * len); if (free(ny + 2, cu)) set(ny + 2, cu, 'UHF'[Math.floor(R() * 3)]); }
+      if (ch === '=' && ny - lastCP > 26 && len >= 2) { var ccp = st + Math.floor(len / 2); if (free(ny + 1, ccp)) { set(ny + 1, ccp, 'C'); lastCP = ny; } }
+      while (sIdx < 3 && ny >= scrollAt[sIdx]) { var cs = st + Math.floor(R() * len); if (free(ny + 1, cs)) set(ny + 1, cs, 'S'); else if (free(ny + 2, cs)) set(ny + 2, cs, 'S'); sIdx++; }
+      L = st; Rr = st + len - 1; y = ny;
+    }
+    while (rows.length < y + 16) rows.push(('#' + '..........' + '#').split(''));
+    N = rows.length;
+    sIdx = 0; for (var ry = 0; ry < rows.length; ry++) for (var rx = 1; rx <= 10; rx++) if (rows[ry][rx] === 'S') sIdx++;   // 덮어써진 두루마리가 있으면 채워요
+    for (var sy = y + 1; sy <= y + 2 && sIdx < 3; sy++) for (var sc = 1; sc <= 10 && sIdx < 3; sc++) if (free(sy, sc) && (sc + sy) % 3 === 0) { set(sy, sc, 'S'); sIdx++; }
+    if (pf.boss) {                                          // 25번째마다 보스 방
+      var b0 = y + 3; for (k = 1; k <= 10; k++) set(b0, k, '=');
+      set(b0 + 1, 6, 'Z'); set(b0 + 6, 1, '='); set(b0 + 6, 2, '='); set(b0 + 6, 9, '='); set(b0 + 6, 10, '=');
+      rows = rows.slice(0, b0 + 11); rows.push('############'.split(''));
+    } else {
+      var g0 = y + 3; for (k = 1; k <= 10; k++) set(g0, k, '='); set(g0 + 1, 6, 'G');
+      rows = rows.slice(0, g0 + 4); rows.push('############'.split(''));
+    }
+    return rows.map(function (rw) { return rw.join(''); });
+  }
+  window.__genStage = genStage;
+  var hook = setInterval(function () {
+    var S; try { S = E('STAGES'); } catch (_) { return; } if (!S || !S.length) return; clearInterval(hook);
+    for (var i = S.length; i < MAX; i++) (function (idx) {
+      var pf = profile(idx), place = PLACE[pf.theme][Math.floor(pf.R() * 4)], cache = null;
+      var o = { name: pf.adj + ' ' + place, sub: (pf.boss ? '보스 · ' : '') + pf.top.filter(function (k) { return pf.w[k] > 0.02; }).map(function (k) { return FEAT[k]; }).join(' · '), theme: pf.theme, hints: [] };
+      Object.defineProperty(o, 'map', { get: function () { if (!cache) cache = genStage(idx); return cache; }, enumerable: true });
+      S.push(o);
+    })(i);
+  }, 200);
+
+  // 스테이지 목록: 50개씩 나눠서 보여 줘요
+  var page = -1;
+  function openStagesPaged(pg) {
+    var S = E('STAGES'), save = E('save'), RANKS = E('RANKS'), BG = E('THEME_BG'), ic = E('ic'), fmtTime = E('fmtTime');
+    var per = 50, pages = Math.ceil(S.length / per);
+    if (pg == null || pg < 0) pg = Math.min(pages - 1, Math.floor(Math.max(0, (save.unlocked || 1) - 1) / per));
+    page = pg;
+    var nav = '<div class="shp-tabs" style="grid-template-columns:repeat(5,1fr);margin-bottom:10px">';
+    for (var p0 = 0; p0 < pages; p0++) nav += '<button data-spg="' + p0 + '" class="' + (p0 === pg ? 'on' : '') + '">' + (p0 * per + 1) + '~</button>';
+    nav += '</div>';
+    var html = '<div class="note" style="margin:0 0 8px">열린 스테이지 ' + Math.min(save.unlocked || 1, S.length) + ' / ' + S.length + '</div>' + nav;
+    for (var i = pg * per; i < Math.min(S.length, (pg + 1) * per); i++) {
+      var s = S[i], locked = i + 1 > save.unlocked, b = save.best['s' + i];
+      var right = locked ? ic('lock') : b ? '<b style="color:' + (RANKS[b.rank].c === '#7b8494' ? '#fff' : '#fff3a0') + '">' + RANKS[b.rank].n + '</b>' + fmtTime(b.time) + ' · 📜' + b.scrolls + '/3' : '<b>NEW</b>도전!';
+      html += '<div class="st' + (locked ? ' locked' : '') + '" data-i="' + i + '" style="background:' + BG[s.theme] + '"><div class="no">' + (i + 1) + '</div><div><div class="nm">' + s.name + '</div><div class="sb">' + s.sub + '</div></div><div class="rk">' + right + '</div></div>';
+    }
+    E('openSheet')(ic('scroll') + '스테이지', html);
+    var body = document.getElementById('sheetBody');
+    body.querySelectorAll('[data-spg]').forEach(function (el) { el.addEventListener('click', function () { try { E('SFX').click(); } catch (_) {} openStagesPaged(+el.dataset.spg); }); });
+    body.querySelectorAll('.st').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var i2 = +el.dataset.i;
+        if (i2 + 1 > E('save').unlocked) { try { E('SFX').nope(); } catch (_) {} el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); return; }
+        try { E('SFX').click(); } catch (_) {} E('closeSheet')(); E('goStage')(i2);
+      });
+    });
+    var cur = body.querySelector('.st[data-i="' + Math.max(0, Math.min(S.length, save.unlocked) - 1) + '"]'); if (cur) setTimeout(function () { cur.scrollIntoView({ block: 'center' }); }, 50);
+  }
+  var hook2 = setInterval(function () {
+    var f; try { f = E('openStages'); } catch (_) { return; } if (typeof f !== 'function') return; clearInterval(hook2);
+    window.openStages = function () { openStagesPaged(-1); };
+  }, 300);
+
+  // 랭킹: 무한의 탑만 보여 줘요
+  var hook3 = setInterval(function () {
+    var f; try { f = E('openRank'); } catch (_) { return; } if (typeof f !== 'function') return; clearInterval(hook3);
+    window.openRank = async function () {
+      var ic = E('ic'), esc = E('esc');
+      E('openSheet')(ic('rank') + '랭킹 · 무한의 탑', '<div class="note">불러오는 중…</div>');
+      try {
+        var r = await E('api')('GET', '/api/rank?board=tower');
+        var list = r.list.length ? r.list.map(function (d, i) { return '<div class="rk-row' + (d.me ? ' me' : '') + '"><span class="rk-n">' + (i < 3 ? ic('medal' + (i + 1)) : i + 1) + '</span><span class="rk-nick">' + esc(d.nick) + '</span><span class="rk-v">' + d.v + 'm</span></div>'; }).join('') : '<div class="note">아직 기록이 없어요. 첫 번째 주인공이 되어보세요!</div>';
+        document.getElementById('sheetBody').innerHTML = '<div class="rk">' + list + '</div>';
+      } catch (e) { document.getElementById('sheetBody').innerHTML = '<div class="note">' + esc((e && e.msg) || '랭킹을 불러오지 못했어요') + '</div>'; }
+    };
+  }, 300);
 })();
