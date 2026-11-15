@@ -2017,14 +2017,14 @@
   var FEAT = { spring: '스프링', move: '움직이는 발판', wall: '벽 타기', lift: '오르내리는 발판', crumble: '무너지는 발판', spike: '가시', enemy: '몬스터', fly: '까마귀' };
   function rng(seed) { var s = (seed >>> 0) || 7; return function () { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
   function profile(idx) {
-    var R = rng(idx * 2654435761 ^ 0x5bd1e995), d = Math.min(1, (idx - 5) / 520) * 0.85;   // 난이도는 천천히 오르고, 끝까지 가도 조금 덜 어려워요
+    var R = rng(idx * 2654435761 ^ 0x5bd1e995), d = Math.min(1, (idx - 5) / 600) * 0.85;   // 300스테이지까지 3시간쯤 걸리도록 천천히 어려워져요
     var w = { spring: 0.02 + R() * 0.08, move: R() * 0.14, wall: R() * 0.12, lift: R() * 0.1, crumble: (0.04 + R() * 0.25) * (0.35 + d), spike: R() < 0.3 ? 0 : (0.04 + R() * 0.18) * (0.3 + d), enemy: (0.06 + R() * 0.22) * (0.5 + d), fly: R() < 0.35 ? 0 : R() * 0.15 * (0.3 + d) };
     var keys = Object.keys(w).sort(function (a, b) { return w[b] - w[a]; });
     return { R: R, d: d, w: w, top: keys.slice(0, 3), theme: THEME_KEYS[Math.floor(R() * 5)] , adj: ADJ[Math.floor(R() * ADJ.length)], boss: idx % 25 === 24 };
   }
   function genStage(idx) {
     var pf = profile(idx), R = pf.R, d = pf.d, w = pf.w;
-    var N = 58 + Math.floor(Math.min(90, idx * 0.22)) + Math.floor(R() * 14), rows = [], i, k;
+    var N = 45 + Math.floor(idx * 0.18) + Math.floor(R() * 8), rows = [], i, k;   // 6번 ≈ 46줄, 300번 ≈ 100줄
     for (i = 0; i < N; i++) rows.push(('#' + '..........' + '#').split(''));
     rows[0] = '############'.split('');
     var set = function (r, c, ch) { if (r > 0 && r < N && c >= 1 && c <= 10) rows[r][c] = ch; };
@@ -2204,4 +2204,49 @@
     g.__cut = true; window[name] = g;
   }
   setInterval(function () { wrap('clearStage'); wrap('towerOver'); wrapModal(); }, 1000);   // 다른 기능이 나중에 감싸도 맨 바깥에서 줄여요
+})();
+
+// ── 보스전 목숨 3개: 보스와 싸우는 중에 3번 쓰러지면 처음부터 다시 ──
+(function () {
+  var E = function (s) { return (0, eval)(s); };
+  var MAX = 3, lives = MAX, over = false, el = null;
+  function fight() { try { var b = E('boss'); return !!(b && !b.dead && b.active); } catch (_) { return false; } }
+  function hud() {
+    if (!document.body) return;
+    if (el && !el.isConnected) el = null;
+    if (!el) { el = document.createElement('div'); el.id = 'bossLives'; el.style.cssText = 'position:absolute;left:50%;top:calc(58px + env(safe-area-inset-top));transform:translateX(-50%);z-index:4;pointer-events:none;font:bold 14px sans-serif;color:#fff;background:rgba(10,12,24,.55);padding:4px 12px;border-radius:14px;white-space:nowrap;display:none'; (document.getElementById('wrap') || document.body).appendChild(el); }
+    var on = fight() && E('mode') === 'play';
+    el.style.display = on ? 'block' : 'none';
+    if (on) { var h = ''; for (var i = 0; i < MAX; i++) h += i < lives ? '❤️' : '🖤'; el.innerHTML = '목숨 ' + h; }
+  }
+  function gameOver() {
+    try {
+      E("mode = 'clear'"); E('show')('ctrl', false); E('show')('pauseBtn', false);
+      var ic = E('ic'), S = E('STAGES'), i = E('stageIdx');
+      E('openModal')('<div class="msub" style="margin:0">STAGE ' + (i + 1) + ' · ' + S[i].name + '</div>' +
+        '<div class="rank" style="color:#ff6b6b">실패</div><div class="msub">보스전에서 목숨 3개를 모두 잃었어요. 처음부터 다시 도전해요!</div>' +
+        '<div class="row2"><button class="go alt" data-act="retry">' + ic('retry') + '다시</button><button class="go ghost" data-act="lobby">' + ic('home') + '로비</button></div>');
+    } catch (_) {}
+  }
+  var hook = setInterval(function () {
+    var die, rs, rb, st; try { die = E('die'); rs = E('doRespawn'); rb = E('resetBoss'); st = E('startStage'); } catch (_) { return; }
+    if ([die, rs, rb, st].some(function (f) { return typeof f !== 'function'; })) return; clearInterval(hook);
+    window.startStage = function () { lives = MAX; over = false; return st.apply(this, arguments); };
+    window.die = function () {
+      var p = E('P'), was = !p || p.dead, inFight = fight();
+      var r = die.apply(this, arguments);
+      try {
+        var p2 = E('P');
+        if (!was && p2 && p2.dead && inFight && !over) {
+          lives--;
+          E('floatText')(p2.x + p2.w / 2, p2.y - 40, lives > 0 ? '목숨 -1 (남은 목숨 ' + lives + ')' : '목숨을 다 썼어요!', '#ff8a8a', 16);
+          if (lives <= 0) { over = true; setTimeout(gameOver, 1000); }
+        }
+      } catch (_) {}
+      return r;
+    };
+    window.doRespawn = function () { if (over) return; return rs.apply(this, arguments); };   // 목숨이 다 떨어지면 다시 살아나지 않아요
+    window.resetBoss = function () { if (!over && lives > 0 && lives < MAX) return; return rb.apply(this, arguments); };   // 목숨이 남아 있으면 보스 체력은 그대로
+  }, 300);
+  (function tick() { try { hud(); } catch (_) {} requestAnimationFrame(tick); })();
 })();
