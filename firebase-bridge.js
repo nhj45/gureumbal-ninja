@@ -328,7 +328,7 @@
             '<input class="adm-in" id="admMsg" maxlength="80" placeholder="메시지 (엽전과 같이 가거나, 메시지만 보낼 수 있어요)" style="flex:1 1 100%">' +
             '<button class="adm-b gray" data-give="msg" style="flex:1 1 100%">메시지만 보내기</button>' +
             '<button class="adm-b" data-give="ninjo" style="flex:1 1 100%;background:#2b3a6b;color:#fff">닌죠 캐릭터 선물하기</button>' +
-            '<input class="adm-in" id="admStage" type="number" inputmode="numeric" min="1" max="500" placeholder="스테이지 번호 (1~500)" style="flex:1 1 120px">' +
+            '<input class="adm-in" id="admStage" type="number" inputmode="numeric" min="1" max="250" placeholder="스테이지 번호 (1~250)" style="flex:1 1 120px">' +
             '<button class="adm-b" data-give="stage" style="background:#2f9e5a;color:#fff">스테이지 열어 주기</button>' +
           '</div>'
         : '';
@@ -406,7 +406,7 @@
         }
         if (give === 'stage') {
           var sN = Math.floor(Number((document.getElementById('admStage') || {}).value));
-          if (!(sN >= 1 && sN <= 500)) { renderAdmin('스테이지 번호를 1 ~ 500 사이로 적어주세요'); return; }
+          if (!(sN >= 1 && sN <= 250)) { renderAdmin('스테이지 번호를 1 ~ 250 사이로 적어주세요'); return; }
           await F.addDoc(F.collection(db, 'users', uid, 'gifts'), { coins: 0, stage: sN, msg: mtx, at: Date.now(), by: x.auth.currentUser.uid });
           admOpen = null; renderAdmin(r.nick + '에게 스테이지 ' + sN + '까지 열어 줬어요');
           return;
@@ -2008,10 +2008,10 @@
   (function tick() { clean(); requestAnimationFrame(tick); })();   // 무한의 탑처럼 나중에 생기는 것도 바로 지워요
 })();
 
-// ── 스테이지 500개: 6번부터는 번호마다 다른 맵과 장애물을 만들어요 (같은 번호는 늘 같은 맵) ──
+// ── 스테이지 250개: 6번부터는 번호마다 다른 맵과 장애물을 만들어요 (같은 번호는 늘 같은 맵) ──
 (function () {
   var E = function (s) { return (0, eval)(s); };
-  var MAX = 500, THEME_KEYS = ['bamboo', 'roof', 'fall', 'castle', 'summit'];
+  var MAX = 250, THEME_KEYS = ['bamboo', 'roof', 'fall', 'castle', 'summit'];
   var PLACE = { bamboo: ['대숲', '죽림', '대나무 길', '푸른 숲'], roof: ['기와 마을', '지붕길', '처마 거리', '저잣거리'], fall: ['폭포', '절벽', '물안개 계곡', '통나무 다리'], castle: ['성벽', '망루', '달빛 성채', '돌계단'], summit: ['봉우리', '구름길', '하늘 정상', '바람 고개'] };
   var ADJ = ['고요한', '바람 부는', '안개 낀', '달빛', '비 내리는', '붉은', '깊은', '험한', '얼어붙은', '타오르는', '잊혀진', '흔들리는', '어두운', '반짝이는', '끝없는'];
   var FEAT = { spring: '스프링', move: '움직이는 발판', wall: '벽 타기', lift: '오르내리는 발판', crumble: '무너지는 발판', spike: '가시', enemy: '몬스터', fly: '까마귀' };
@@ -2222,7 +2222,7 @@
   function hud() {
     if (!document.body) return;
     if (el && !el.isConnected) el = null;
-    if (!el) { el = document.createElement('div'); el.id = 'bossLives'; el.style.cssText = 'position:absolute;left:50%;top:calc(58px + env(safe-area-inset-top));transform:translateX(-50%);z-index:4;pointer-events:none;font:bold 14px sans-serif;color:#fff;background:rgba(10,12,24,.55);padding:4px 12px;border-radius:14px;white-space:nowrap;display:none'; (document.getElementById('wrap') || document.body).appendChild(el); }
+    if (!el) { el = document.createElement('div'); el.id = 'bossLives'; el.style.cssText = 'position:absolute;left:50%;top:calc(130px + env(safe-area-inset-top));transform:translateX(-50%);z-index:4;pointer-events:none;font:bold 14px sans-serif;color:#fff;background:rgba(10,12,24,.55);padding:4px 12px;border-radius:14px;white-space:nowrap;display:none'; (document.getElementById('wrap') || document.body).appendChild(el); }
     var on = fight() && E('mode') === 'play';
     el.style.display = on ? 'block' : 'none';
     if (on) { var h = ''; for (var i = 0; i < MAX; i++) h += i < lives ? '❤️' : '🖤'; el.innerHTML = '목숨 ' + h; }
@@ -2339,5 +2339,91 @@
     if (typeof st !== 'function' || typeof rg !== 'function') return; clearInterval(hook);
     window.startStage = function () { var r = st.apply(this, arguments); try { startMod(); } catch (_) {} return r; };
     window.renderGame = function () { var r = rg.apply(this, arguments); try { overlay(); } catch (_) {} return r; };
+  }, 300);
+})();
+
+// ── 더 재밌게: 보스 4종류 + 클리어 후 보물 상자 ──
+(function () {
+  var E = function (s) { return (0, eval)(s); };
+  var KINDS = [
+    { name: '너구리 장군', col: '#ff6a5a', glow: 'rgba(255,90,70,', seq: null },
+    { name: '도토리 대장', col: '#c98a3e', glow: 'rgba(230,160,60,', seq: ['throw', 'walk', 'throw', 'leap', 'throw', 'drum'] },
+    { name: '점프 대왕', col: '#4fc36b', glow: 'rgba(80,220,110,', seq: ['leap', 'leap', 'walk', 'leap', 'drum'] },
+    { name: '북치기 대마왕', col: '#a66bff', glow: 'rgba(170,110,255,', seq: ['drum', 'leap', 'drum', 'throw', 'walk', 'drum'] }
+  ];
+  function kind() { try { if (E('ENDLESS')) return null; var i = E('stageIdx'); if (i < 5) return null; return KINDS[Math.floor(i / 25) % KINDS.length]; } catch (_) { return null; } }
+  window.__bossKind = kind;
+  var hook = setInterval(function () {
+    var st, nb, db, dbb, cs; try { st = E('startStage'); nb = E('nextBossState'); db = E('drawBoss'); dbb = E('drawBossBar'); cs = E('clearStage'); } catch (_) { return; }
+    if ([st, nb, db, dbb, cs].some(function (f) { return typeof f !== 'function'; })) return; clearInterval(hook);
+    // 뒤로 갈수록 보스 체력이 조금씩 늘어나요 (10 → 250번은 14)
+    window.startStage = function () {
+      var r = st.apply(this, arguments);
+      try { var b = E('boss'), k = kind(); if (b && k) { b.max = b.hp = 10 + Math.floor(E('stageIdx') / 50); } } catch (_) {}
+      return r;
+    };
+    // 보스마다 공격 순서가 달라요
+    window.nextBossState = function () {
+      var k = kind(), b = E('boss'); if (!k || !k.seq || !b) return nb.apply(this, arguments);
+      var phase2 = b.hp <= b.max / 2, s = k.seq[b.step++ % k.seq.length];
+      b.state = s;
+      if (s === 'walk') b.t = phase2 ? 1.0 : 1.4;
+      else if (s === 'drum') { b.t = phase2 ? 1.6 : 1.3; b.drum = 0; }
+      else if (s === 'throw') { b.t = 1.2; b.thrown = 0; }
+      else if (s === 'leap') {
+        var P = E('P'), W = E('W'), px = P ? P.x + P.w / 2 : W / 2, bx = b.x + b.w / 2;
+        b.vy = k.name === '점프 대왕' ? -820 : -720; b.vx = Math.max(-300, Math.min(300, (px - bx) / 0.85)); b.ground = false; b.t = 0.3;
+        try { E('tone')(200, 0.3, 'square', 0.06, 300); } catch (_) {}
+      }
+    };
+    // 보스 뒤에 색깔 기운
+    window.drawBoss = function () {
+      try {
+        var k = kind(), b = E('boss'), c = E('ctx'), tm = E('time');
+        if (k && b && !(b.dead > 0.8)) {
+          var bx = b.x + b.w / 2, by = b.y + b.h / 2, r = 70 + Math.sin(tm * 4) * 6, g = c.createRadialGradient(bx, by, 10, bx, by, r);
+          g.addColorStop(0, k.glow + '.55)'); g.addColorStop(1, k.glow + '0)'); c.save(); c.fillStyle = g; c.beginPath(); c.arc(bx, by, r, 0, 6.283); c.fill(); c.restore();
+        }
+      } catch (_) {}
+      return db.apply(this, arguments);
+    };
+    // 체력바에 보스 이름과 색
+    window.drawBossBar = function () {
+      var k = kind(); if (!k) return dbb.apply(this, arguments);
+      try {
+        var b = E('boss'), c = E('ctx'), W = E('W'), INK = E('INK'), rr = E('rr'), x = 40, y = 92, w = W - 80, h = 16, kk = b.hp / b.max;
+        c.fillStyle = INK; rr(c, x - 3, y, w + 6, h + 6, 10); c.fill();
+        c.fillStyle = '#2a2a3a'; rr(c, x - 3, y - 3, w + 6, h + 6, 10); c.fill();
+        c.fillStyle = k.col; rr(c, x, y, Math.max(0.01, w * kk), h, 7); c.fill();
+        c.fillStyle = 'rgba(255,255,255,.35)'; rr(c, x + 3, y + 2, Math.max(0.01, w * kk - 6), 4, 2); c.fill();
+        c.strokeStyle = INK; c.lineWidth = 2.4; rr(c, x - 3, y - 3, w + 6, h + 6, 10); c.stroke();
+        c.font = '14px Jua, sans-serif'; c.textAlign = 'center'; c.lineWidth = 4; c.strokeStyle = INK; c.strokeText(k.name, W / 2, y - 8); c.fillStyle = '#ffe14a'; c.fillText(k.name, W / 2, y - 8);
+      } catch (_) { return dbb.apply(this, arguments); }
+    };
+    // 클리어하면 가끔 보물 상자
+    window.clearStage = function () {
+      var r = cs.apply(this, arguments);
+      try {
+        var i = E('stageIdx'), boss = E('boss'), chance = boss ? 1 : 0.3;
+        if (!E('ENDLESS') && Math.random() < chance) setTimeout(function () {
+          var card = document.getElementById('mcard'); if (!card || card.querySelector('.chest')) return;
+          var bt = document.createElement('button'); bt.className = 'go chest';
+          bt.style.cssText = 'background:linear-gradient(#ffd75a,#e8a317);color:#3a2400;margin-top:8px;animation:chestWob .6s ease-in-out infinite alternate';
+          bt.innerHTML = '🎁 보물 상자 발견! 눌러서 열기';
+          if (!document.getElementById('chestCss')) { var st2 = document.createElement('style'); st2.id = 'chestCss'; st2.textContent = '@keyframes chestWob{from{transform:rotate(-2deg) scale(1)}to{transform:rotate(2deg) scale(1.04)}}'; document.head.appendChild(st2); }
+          bt.onclick = function (ev) {
+            ev.stopPropagation(); bt.onclick = null; bt.style.animation = 'none';
+            var roll = Math.random(), n = roll < 0.05 ? 60 : roll < 0.3 ? 20 : 5 + Math.floor(Math.random() * 8);
+            if (boss) n += 15;
+            var sv = E('save'); sv.coins += n; E('persist')();
+            try { var w = document.getElementById('wallet'); if (w) w.textContent = sv.coins; } catch (_) {}
+            try { E('SFX').coin && E('SFX').coin(); } catch (_) {}
+            bt.innerHTML = (n >= 60 ? '🎉 대박! ' : '✨ ') + '엽전 +' + n;
+          };
+          var earn = card.querySelector('.earn'); earn ? earn.after(bt) : card.appendChild(bt);
+        }, 1800);
+      } catch (_) {}
+      return r;
+    };
   }, 300);
 })();
