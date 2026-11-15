@@ -1670,55 +1670,87 @@
   }
   function size() { if (!cv) return; dpr = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; }
   function tone(f, d, ty, v, s) { try { E('tone')(f, d, ty || 'triangle', v || 0.05, s || 0); } catch (_) {} }
-  var CAP = [[0.3, 1.9, '깊고 깊은 대나무 숲…'], [2.0, 3.7, '하찮지만 진지한 닌자가 있었으니…'], [3.8, 5.3, '오늘도 구름을 밟고 수련은 계속된다!']];
-  var END = 6.6, clouds = [];
+  var CAP = [[0.3, 1.6, '저 높고 높은 구름 위에서…', 0], [2.75, 4.0, '쿠우우웅——!!', 1], [4.0, 5.2, '하찮지만 진지한 닌자, 등장!', 0]];
+  var END = 6.4, FALL0 = 1.2, HIT = 2.6, clouds = [], dust = [], cracks = [];
   for (var i = 0; i < 6; i++) clouds.push({ x: Math.random(), y: 0.15 + Math.random() * 0.35, s: 0.6 + Math.random() * 0.8, v: 0.01 + Math.random() * 0.02 });
+  for (var q = 0; q < 9; q++) { var ang = Math.PI + (q + 0.5) / 9 * Math.PI, pts = [[0, 0]], r0 = 0, aa = ang; for (var k = 0; k < 5; k++) { r0 += 14 + Math.random() * 22; aa += (Math.random() - 0.5) * 0.5; pts.push([Math.cos(aa) * r0, -Math.sin(aa) * r0 * 0.25]); } cracks.push(pts); }
   function ease(x) { return x < 0 ? 0 : x > 1 ? 1 : 1 - Math.pow(1 - x, 3); }
   function cloud(x, y, s, a) { c.save(); c.globalAlpha = a; c.fillStyle = '#ffffff'; c.beginPath(); c.arc(x, y, 18 * s, 0, 6.283); c.arc(x + 20 * s, y - 8 * s, 22 * s, 0, 6.283); c.arc(x + 42 * s, y, 18 * s, 0, 6.283); c.rect(x, y - 2 * s, 42 * s, 18 * s); c.fill(); c.restore(); }
   var sfx = {};
   function once(k, fn) { if (!sfx[k]) { sfx[k] = 1; fn(); } }
+  function boom() {
+    tone(70, 0.7, 'sawtooth', 0.12, -40); tone(140, 0.4, 'square', 0.08, -90);
+    try { E('noise')(0.6, 0.18, 300); } catch (_) {}
+    try { navigator.vibrate && navigator.vibrate([90, 40, 60]); } catch (_) {}
+  }
   function frame(now) {
     if (done) return;
-    var t = (now - t0) / 1000;
+    var t = (now - t0) / 1000, gy = H * 0.72, cx = W * 0.5;
+    var shake = t > HIT ? Math.max(0, 1 - (t - HIT) / 0.9) : 0;
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.translate((Math.random() - 0.5) * 22 * shake, (Math.random() - 0.5) * 22 * shake);
     var sky = c.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#0f1530'); sky.addColorStop(1, '#3a4a7a');
-    c.fillStyle = sky; c.fillRect(0, 0, W, H);
+    c.fillStyle = sky; c.fillRect(-30, -30, W + 60, H + 60);
     for (var s = 0; s < 40; s++) { c.globalAlpha = 0.3 + 0.3 * Math.sin(t * 2 + s); c.fillStyle = '#fff'; c.fillRect((s * 97) % W, (s * 53) % (H * 0.5), 2, 2); } c.globalAlpha = 1;
-    var ma = ease(t / 1.2); c.fillStyle = 'rgba(255,243,196,' + ma + ')'; c.shadowColor = '#fff3c4'; c.shadowBlur = 40 * ma; c.beginPath(); c.arc(W * 0.74, H * 0.2, Math.min(W, H) * 0.09, 0, 6.283); c.fill(); c.shadowBlur = 0;
+    var ma = ease(t / 1.0); c.fillStyle = 'rgba(255,243,196,' + ma + ')'; c.shadowColor = '#fff3c4'; c.shadowBlur = 40 * ma; c.beginPath(); c.arc(W * 0.74, H * 0.2, Math.min(W, H) * 0.09, 0, 6.283); c.fill(); c.shadowBlur = 0;
     clouds.forEach(function (k) { cloud(((k.x + t * k.v) % 1.2 - 0.1) * W, k.y * H, k.s, 0.25); });
-    var gy = H * 0.72, rise = ease(t / 1.3);
-    for (var b = 0; b < 14; b++) {                         // 대나무 실루엣
+    var rise = ease(t / 1.1);
+    for (var b = 0; b < 14; b++) {                         // 대나무 (충격에 흔들려요)
       var bx = (b + 0.5) / 14 * W + Math.sin(b * 3.1) * 12, bh = H * (0.45 + 0.35 * Math.abs(Math.sin(b * 1.7)));
-      c.fillStyle = b % 2 ? '#1c2a3a' : '#22344a'; c.fillRect(bx - 5, gy - bh * rise, 10, bh * rise + 10);
-      for (var n = 1; n < 5; n++) { c.fillStyle = '#0f1a26'; c.fillRect(bx - 6, gy - bh * rise * n / 5, 12, 3); }
+      var sway = shake * Math.sin(t * 40 + b) * 10 * (bx < cx ? -1 : 1);
+      c.save(); c.translate(bx, gy); c.rotate(sway * 0.01);
+      c.fillStyle = b % 2 ? '#1c2a3a' : '#22344a'; c.fillRect(-5, -bh * rise, 10, bh * rise + 10);
+      for (var n = 1; n < 5; n++) { c.fillStyle = '#0f1a26'; c.fillRect(-6, -bh * rise * n / 5, 12, 3); }
+      c.restore();
     }
-    c.fillStyle = '#16202e'; c.fillRect(0, gy, W, H - gy);
-    // 닌자: 달려 들어와서 멈추고, 높이 뛰어 구름 위에 착지
-    var nx, ny = gy, st = 'idle', face = 1, run = t * 14;
-    if (t < 1.8) { nx = -40; } else if (t < 3.0) { var r = ease((t - 1.8) / 1.2); nx = -40 + (W * 0.5 + 40) * r; st = r < 0.98 ? 'run' : 'idle'; }
-    else nx = W * 0.5;
-    var cy = H * 0.4, cx = W * 0.5 - 21 * 1.6;
-    if (t > 3.9) {
-      var j = Math.min(1, (t - 3.9) / 0.7); once('jump', function () { tone(300, 0.25, 'square', 0.05, 600); });
-      ny = gy + (cy - gy) * ease(j) - Math.sin(j * Math.PI) * 60; st = j < 1 ? 'jump' : 'idle';
-      if (j >= 1) once('land', function () { tone(880, 0.12, 'triangle', 0.06, 200); });
+    c.fillStyle = '#16202e'; c.fillRect(-30, gy, W + 60, H - gy + 30);
+    // 떨어지는 닌자
+    var st = 'idle', ny = gy, sc = 1.6, sy = 1, sxx = 1, show = false;
+    if (t >= FALL0 && t < HIT) {
+      show = true; var f = (t - FALL0) / (HIT - FALL0); f = f * f;
+      ny = -80 + (gy + 80) * f; sc = 0.7 + 0.9 * f; st = 'jump';
+      once('whistle', function () { tone(1400, 1.3, 'sine', 0.04, -1200); });
+      c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 2;               // 속도선
+      for (var L = 0; L < 10; L++) { var lx = cx + (L - 4.5) * 9 * sc, ly = ny - 30 * sc - (L % 3) * 14; c.beginPath(); c.moveTo(lx, ly - 30 - 60 * f); c.lineTo(lx, ly); c.stroke(); }
+    } else if (t >= HIT) {
+      show = true;
+      var after = t - HIT; sy = after < 0.12 ? 0.6 : after < 0.5 ? 0.6 + 0.4 * ease((after - 0.12) / 0.38) : 1; sxx = 2 - sy;
+      st = after < 1.3 ? 'idle' : 'idle';
+      once('boom', function () {
+        boom();
+        for (var d = 0; d < 46; d++) { var a = Math.PI + Math.random() * Math.PI, sp = 120 + Math.random() * 380; dust.push({ x: cx, y: gy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6 - 80, life: 0.8 + Math.random() * 0.6, r: 3 + Math.random() * 6 }); }
+      });
+      // 땅 갈라짐
+      var cr = Math.min(1, after / 0.25);
+      c.save(); c.translate(cx, gy + 3); c.strokeStyle = '#05080f'; c.lineWidth = 3; c.lineJoin = 'round';
+      cracks.forEach(function (pts) { c.beginPath(); c.moveTo(0, 0); var m = Math.max(1, Math.round(pts.length * cr)); for (var z = 1; z < m; z++) c.lineTo(pts[z][0] * 1.6, pts[z][1] * 1.6 + 6); c.stroke(); });
+      c.restore();
+      // 충격파 고리
+      for (var w = 0; w < 3; w++) { var rt = after - w * 0.12; if (rt < 0 || rt > 0.9) continue; var rr2 = ease(rt / 0.9) * Math.max(W, H) * 0.7; c.globalAlpha = (1 - rt / 0.9) * 0.8; c.strokeStyle = w ? '#ffd84a' : '#ffffff'; c.lineWidth = 8 - w * 2; c.beginPath(); c.ellipse(cx, gy, rr2, rr2 * 0.28, 0, 0, 6.283); c.stroke(); }
+      c.globalAlpha = 1;
     }
-    if (t > 3.6) cloud(cx, cy + 10, 1.6, ease((t - 3.6) / 0.4));
-    if (nx > -30) {
-      c.fillStyle = 'rgba(0,0,0,.3)'; c.beginPath(); c.ellipse(nx, (t > 3.9 ? cy + 6 : gy + 2), 18, 4, 0, 0, 6.283); c.fill();
-      try { E('drawNinja')(c, E('curLook')(), { x: nx, y: ny, s: 1.6, face: face, st: st, run: run, t: t, idleT: t, sx: 1, sy: 1, vy: st === 'jump' ? -1 : 0, lean: st === 'run' ? 0.12 : 0 }); } catch (_) {}
+    dust = dust.filter(function (d) { d.life -= 1 / 60; d.x += d.vx / 60; d.y += d.vy / 60; d.vy += 600 / 60; if (d.y > gy) { d.y = gy; d.vy *= -0.3; d.vx *= 0.7; } return d.life > 0; });
+    dust.forEach(function (d) { c.globalAlpha = Math.min(1, d.life); c.fillStyle = '#a8a4b8'; c.beginPath(); c.arc(d.x, d.y, d.r, 0, 6.283); c.fill(); }); c.globalAlpha = 1;
+    if (show) {
+      c.fillStyle = 'rgba(0,0,0,.35)'; c.beginPath(); c.ellipse(cx, gy + 2, 22 * Math.min(1.6, sc) / 1.6 * sxx, 5, 0, 0, 6.283); c.fill();
+      try { E('drawNinja')(c, E('curLook')(), { x: cx, y: ny, s: sc, face: 1, st: st, run: 0, t: t, idleT: t, sx: sxx, sy: sy, vy: st === 'jump' ? 1 : 0, lean: 0 }); } catch (_) {}
     }
+    if (t >= HIT && t < HIT + 0.18) { c.fillStyle = 'rgba(255,255,255,' + (1 - (t - HIT) / 0.18) * 0.85 + ')'; c.fillRect(-30, -30, W + 60, H + 60); }
     CAP.forEach(function (k) {                             // 자막
       if (t < k[0] || t > k[1]) return;
-      var a = Math.min(1, (t - k[0]) / 0.3, (k[1] - t) / 0.3);
-      c.globalAlpha = a; c.font = 'bold ' + Math.round(Math.min(22, W / 17)) + 'px sans-serif'; c.textAlign = 'center';
-      c.lineWidth = 5; c.strokeStyle = '#0b0f20'; c.strokeText(k[2], W / 2, H * 0.86); c.fillStyle = '#fff'; c.fillText(k[2], W / 2, H * 0.86); c.globalAlpha = 1;
+      var a = Math.min(1, (t - k[0]) / 0.25, (k[1] - t) / 0.3), big = k[3];
+      c.save(); c.globalAlpha = a; c.textAlign = 'center';
+      var fz = big ? Math.round(Math.min(44, W / 9)) : Math.round(Math.min(22, W / 17));
+      c.font = (big ? '900 ' : 'bold ') + fz + 'px sans-serif';
+      var yy = big ? H * 0.36 : H * 0.86;
+      if (big) { c.translate(W / 2, yy); c.rotate(-0.06); c.scale(1 + Math.max(0, 0.3 - (t - k[0])) * 1.5, 1 + Math.max(0, 0.3 - (t - k[0])) * 1.5); c.translate(-W / 2, -yy); }
+      c.lineWidth = big ? 9 : 5; c.strokeStyle = '#0b0f20'; c.strokeText(k[2], W / 2, yy); c.fillStyle = big ? '#ffd84a' : '#fff'; c.fillText(k[2], W / 2, yy);
+      c.restore();
     });
-    if (t > 5.3) {                                         // 제목 등장
-      var tt = ease((t - 5.3) / 0.5), sc = 0.6 + 0.4 * tt + Math.sin(Math.min(1, (t - 5.3) / 0.5) * Math.PI) * 0.15;
+    if (t > 5.0) {                                         // 제목 등장
+      var tt = ease((t - 5.0) / 0.5), sc2 = 0.6 + 0.4 * tt + Math.sin(Math.min(1, (t - 5.0) / 0.5) * Math.PI) * 0.15;
       once('title', function () { tone(523, 0.15, 'square', 0.05); setTimeout(function () { tone(784, 0.3, 'square', 0.05); }, 140); });
-      if (t < 5.55) { c.fillStyle = 'rgba(255,255,255,' + (1 - (t - 5.3) / 0.25) * 0.6 + ')'; c.fillRect(0, 0, W, H); }
-      c.save(); c.translate(W / 2, H * 0.2); c.scale(sc, sc); c.globalAlpha = tt; c.textAlign = 'center';
+      c.save(); c.translate(W / 2, H * 0.2); c.scale(sc2, sc2); c.globalAlpha = tt; c.textAlign = 'center';
       var fs = Math.round(Math.min(56, W / 7)); c.font = '900 ' + fs + 'px sans-serif'; c.lineWidth = 8; c.strokeStyle = '#0b0f20';
       c.strokeText('구름발', 0, 0); c.fillStyle = '#ffffff'; c.fillText('구름발', 0, 0);
       c.strokeText('닌자', 0, fs * 1.05); c.fillStyle = '#3ddc84'; c.fillText('닌자', 0, fs * 1.05); c.restore();
