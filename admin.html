@@ -137,6 +137,11 @@ pre{background:#0b0e19;border:1px solid var(--line);border-radius:8px;padding:10
     </div>
 
     <section class="card">
+      <h3><span class="dot"></span>버그 신고 · 의견 <small class="muted" id="repCnt"></small></h3>
+      <div id="repList" class="muted">불러오는 중…</div>
+    </section>
+
+    <section class="card">
       <h3><span class="dot"></span>플레이어</h3>
       <div class="bar" style="margin-bottom:10px"><input id="q" placeholder="아이디 또는 닉네임으로 찾기"><button id="reload">새로고침</button><label class="muted"><input type="checkbox" id="onlyBan"> 정지된 사람만</label></div>
       <div class="tablewrap"><table><thead><tr><th>닉네임</th><th>아이디</th><th class="num">엽전</th><th class="num">탑</th><th class="num">1단계</th><th class="num">2단계</th><th class="num">3단계</th><th class="num">4단계</th><th class="num">5단계</th><th>마지막 저장</th><th>상태</th></tr></thead><tbody id="tb"></tbody></table></div>
@@ -266,8 +271,22 @@ async function loadUsers() {
     const best = sv.best || {};
     return { uid: d.id, id: v.id || '?', nick: v.nick || '닌자', coins: sv.coins || 0, tower: (sv.stats && sv.stats.tower) || 0, t: [0, 1, 2, 3, 4].map(i => best['s' + i] ? best['s' + i].time : null), updated: v.updated || 0, save: sv };
   });
+  REPORTS = [];
+  us.docs.forEach(d => { const v = d.data(), r = v.reports || {}; Object.keys(r).forEach(ts => REPORTS.push({ uid: d.id, id: v.id || '?', nick: v.nick || '닌자', ts: +ts, t: r[ts].t || '', s: r[ts].s || 0, ua: r[ts].ua || '' })); });
+  REPORTS.sort((a, b) => b.ts - a.ts); renderReports();
   renderTable(); renderStats();
 }
+let REPORTS = [];
+function renderReports() {
+  $('repCnt').textContent = REPORTS.length ? REPORTS.length + '개' : '';
+  $('repList').innerHTML = REPORTS.length ? REPORTS.map(r => `<div style="border-bottom:1px solid rgba(128,128,128,.25);padding:8px 0;display:flex;gap:10px;align-items:flex-start"><div style="flex:1"><b>${h(r.nick)}</b> <small class="muted">@${h(r.id)} · ${ago(r.ts)}${r.s ? ' · ' + r.s + '스테이지' : ''}</small><div style="white-space:pre-wrap;margin-top:4px">${h(r.t)}</div><small class="muted">${h(r.ua)}</small></div><button data-repdel="${r.uid}|${r.ts}">처리 완료</button></div>`).join('') : '<span class="muted">들어온 신고가 없어요</span>';
+}
+$('repList').addEventListener('click', async e => {
+  const b = e.target.closest('[data-repdel]'); if (!b) return;
+  const [uid, ts] = b.dataset.repdel.split('|');
+  try { await F.updateDoc(F.doc(db, 'users', uid), { ['reports.' + ts]: F.deleteField() }); REPORTS = REPORTS.filter(r => !(r.uid === uid && String(r.ts) === ts)); renderReports(); toast('지웠어요'); }
+  catch (er) { toast('지우지 못했어요: ' + (er.code || er.message), true); }
+});
 async function loadPresence() {
   const ps = await F.getDocs(F.query(F.collection(db, 'presence'), F.where('at', '>', Date.now() - 120000)));
   PRES = {}; ps.docs.forEach(d => { if (d.id !== auth.currentUser.uid && d.data().id !== '123eet7') PRES[d.id] = d.data(); });
