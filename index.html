@@ -42,7 +42,7 @@ html,body{margin:0;height:100%;background:#1b2340;color:#fff;font-family:sans-se
   function show(p) { p = Math.max(0.03, Math.min(0.99, p)); bar.style.width = (p * 100) + '%'; msg.textContent = MSGS[Math.min(MSGS.length - 1, Math.floor(p * MSGS.length))] + ' ' + Math.floor(p * 100) + '%'; }
   function start(html) {
     bar.style.width = '100%'; msg.textContent = '준비 완료!';
-    var tag = '<script src="firebase-bridge.js?v=44"><\/script>';
+    var tag = '<script src="firebase-bridge.js?v=45"><\/script>';
     html = /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, function (m) { return m + tag; }) : tag + html;
     setTimeout(function () { document.open(); document.write(html); document.close(); }, 60);
   }
