@@ -1207,7 +1207,7 @@
     document.body.classList.add('pcMode');
     var wrap = document.getElementById('wrap') || document.body;
     var hint = document.createElement('div'); hint.id = 'pcKeys';
-    hint.innerHTML = '<b>←→</b>/<b>AD</b> 이동 · <b>Space</b> 점프 · <b>Q</b> 대시 · <b>E</b> 베기 · <b>P</b> 일시정지';
+    hint.innerHTML = '<b>←→</b>/<b>AD</b> 이동 · <b>Space</b> 점프 · <b>Q</b> 대시 · <b>E</b> 베기 · <b>R</b> 표창 · <b>P</b> 일시정지';
     hint.style.display = 'none'; wrap.appendChild(hint);
     var ctrl = document.getElementById('ctrl');
     setInterval(function () {
@@ -2552,6 +2552,7 @@
     ['wall', '벽 타기', '벽에 붙으면 천천히 미끄러져요. 그때 점프하면 반대쪽으로 벽 점프!'],
     ['dash', '대시', (PC ? 'Q 키' : '파란 대시 버튼') + '로 앞으로 휙! 대시하는 동안은 몬스터에 닿아도 괜찮아요.'],
     ['slash', '베기 · 보스 잡기', (PC ? 'E 키' : '빨간 베기 버튼') + '로 몬스터를 베요. 보스는 머리를 밟거나 대시로 부딪혀서 때려요.'],
+    ['star', '표창 던지기', (PC ? 'R 키' : '베기 버튼 위 표창 버튼') + '으로 표창을 던져요! 3개까지 들고 있고 시간이 지나면 다시 채워져요. 보스도 맞힐 수 있어요.'],
     ['flag', '목표', '엽전과 두루마리 3개를 모으면서 맨 위 깃발까지 올라가요. 떨어지면 마지막 등불에서 다시 시작해요!']
   ];
   function showTutorial(done) {
