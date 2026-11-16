@@ -3308,6 +3308,228 @@
   }, 300);
 })();
 
+// ── 새 몬스터 7종: 달팽이 · 박쥐 · 멧돼지 · 집게 게 · 산토끼 · 말벌 · 독버섯 (스테이지가 오를수록 하나씩 나와요) ──
+(function () {
+  var E = function (s) { return (0, eval)(s); };
+  var TAU = Math.PI * 2, INK = '#141418';
+  // base: 원래 몬스터(움직임·규칙은 그대로) / from: 처음 나오는 스테이지 / p: 바뀌는 확률 / sp: 속도 배수
+  var VAR = [
+    { cv: 'snail', base: 'tanuki', from: 3, p: 0.3, sp: 0.55, n: '느림보 달팽이', d: '느릿느릿 기어 다녀요' },
+    { cv: 'bat', base: 'crow', from: 6, p: 0.4, sp: 1.25, n: '동굴 박쥐', d: '파닥파닥 빠르게 날아요' },
+    { cv: 'boar', base: 'tanuki', from: 12, p: 0.3, sp: 1.7, n: '돌진 멧돼지', d: '엄청 빠르게 달려들어요' },
+    { cv: 'crab', base: 'hedgehog', from: 18, p: 0.45, sp: 1.15, n: '집게 게', d: '집게가 날카로워서 밟으면 아파요' },
+    { cv: 'rabbit', base: 'frog', from: 25, p: 0.45, sp: 1, n: '산토끼', d: '높이 깡총 뛰어올라요' },
+    { cv: 'bee', base: 'crow', from: 35, p: 0.35, sp: 1.45, n: '말벌', d: '윙윙 빠르게 날아다녀요' },
+    { cv: 'shroom', base: 'hedgehog', from: 40, p: 0.4, sp: 0.6, n: '독버섯', d: '독이 있어서 밟으면 아파요' }
+  ];
+  window.__cnMonVar = VAR;
+  function stageNo() {
+    try { if (E('ENDLESS')) return 10 + Math.max(0, E('bandIdx')) * 15; return E('stageIdx') + 1; } catch (_) { return 1; }
+  }
+  function ol(g, w) { g.strokeStyle = INK; g.lineWidth = w || 1.3; g.stroke(); }
+  function eyes(g, x, y, r, look) {
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); ol(g, 1);
+    g.fillStyle = INK; g.beginPath(); g.arc(x + (look || 0.6), y + 0.2, r * 0.5, 0, TAU); g.fill();
+  }
+  function walkerStart(g, e) {
+    g.save(); g.translate(e.x + e.w / 2, e.y + e.h);
+    if (e.dead) { g.globalAlpha = Math.max(0, 1 - e.dead / 0.6); g.scale(1.4, Math.max(0.15, 0.35 - e.dead * 0.3)); }
+    else { var b = Math.abs(Math.sin(e.ph)) * 0.06; g.scale(1 + b * 0.5, 1 - b); }
+    g.scale(e.vx > 0 ? 1 : -1, 1); g.lineJoin = 'round'; g.lineCap = 'round';
+    g.fillStyle = 'rgba(0,0,0,.22)'; g.beginPath(); g.ellipse(0, 0, 12, 2.4, 0, 0, TAU); g.fill();
+  }
+  function flyerStart(g, e) {
+    g.save(); g.translate(e.x + e.w / 2, e.y + e.h / 2);
+    if (e.dead) { g.globalAlpha = Math.max(0, 1 - e.dead / 0.6); g.rotate(e.dead * 8); }
+    g.scale(e.vx > 0 ? 1 : -1, 1); g.lineJoin = 'round'; g.lineCap = 'round';
+  }
+  var DRAW = {
+    snail: function (g, e) {
+      walkerStart(g, e);
+      var w = Math.sin(e.ph * 0.6) * 1.2;
+      g.beginPath(); g.moveTo(-12, 0); g.quadraticCurveTo(-12, -6, -4, -6); g.lineTo(9 + w, -6); g.quadraticCurveTo(14 + w, -6, 13 + w, -1); g.lineTo(13 + w, 0); g.closePath();
+      g.fillStyle = '#b9d36a'; g.fill(); ol(g);
+      g.beginPath(); g.moveTo(9 + w, -6); g.lineTo(8 + w, -14); g.moveTo(12 + w, -5); g.lineTo(14 + w, -13); g.strokeStyle = INK; g.lineWidth = 1.2; g.stroke();
+      g.fillStyle = INK; g.beginPath(); g.arc(8 + w, -14.5, 1.6, 0, TAU); g.arc(14 + w, -13.5, 1.6, 0, TAU); g.fill();
+      g.beginPath(); g.arc(-3, -11, 9, 0, TAU); g.fillStyle = '#d9894a'; g.fill(); ol(g, 1.4);
+      g.beginPath(); for (var a = 0; a < 9; a += 0.25) { var r = 7.5 - a * 0.8; g.lineTo(-3 + Math.cos(a) * r, -11 + Math.sin(a) * r); }
+      g.strokeStyle = '#8a4a22'; g.lineWidth = 1.6; g.stroke();
+      g.restore();
+    },
+    boar: function (g, e) {
+      walkerStart(g, e);
+      var st = Math.sin(e.ph * 1.6) * 3;
+      g.fillStyle = '#3b2a1e'; [[-7 + st, -4], [-2 - st, -4], [4 + st, -4], [8 - st, -4]].forEach(function (l) { g.fillRect(l[0], l[1], 3, 4); });
+      g.beginPath(); g.ellipse(-1, -10, 12, 7.5, 0, 0, TAU); g.fillStyle = '#6b4a36'; g.fill(); ol(g, 1.4);
+      g.beginPath(); g.moveTo(-10, -16); for (var k = 0; k < 5; k++) { g.lineTo(-8 + k * 3, -19 - (k % 2) * 2); g.lineTo(-6.5 + k * 3, -16.5); } g.fillStyle = '#3b2a1e'; g.fill();
+      g.beginPath(); g.ellipse(11, -9, 4.5, 4, 0, 0, TAU); g.fillStyle = '#e6a39a'; g.fill(); ol(g, 1.1);
+      g.fillStyle = INK; g.beginPath(); g.arc(12, -10, 0.9, 0, TAU); g.arc(12, -7.8, 0.9, 0, TAU); g.fill();
+      g.beginPath(); g.moveTo(8.5, -6); g.quadraticCurveTo(11, -3, 8, -1.5); g.strokeStyle = '#fff8e6'; g.lineWidth = 2; g.stroke();
+      g.beginPath(); g.moveTo(1, -15); g.lineTo(3, -19.5); g.lineTo(5, -14.5); g.fillStyle = '#6b4a36'; g.fill(); ol(g, 1);
+      eyes(g, 5.5, -11.5, 2.3, 0.7);
+      g.beginPath(); g.moveTo(3, -14.6); g.lineTo(8, -13.2); g.strokeStyle = INK; g.lineWidth = 1.3; g.stroke();
+      g.restore();
+    },
+    crab: function (g, e) {
+      walkerStart(g, e);
+      var st = Math.sin(e.ph * 1.8) * 1.5, cl = Math.sin(e.ph * 0.9) * 0.3;
+      g.strokeStyle = '#a3261d'; g.lineWidth = 1.8;
+      for (var k = 0; k < 3; k++) { g.beginPath(); g.moveTo(-6 + k * 2, -5); g.lineTo(-11 + k * 2 + (k % 2 ? st : -st), 0); g.moveTo(6 - k * 2, -5); g.lineTo(11 - k * 2 + (k % 2 ? -st : st), 0); g.stroke(); }
+      g.beginPath(); g.ellipse(0, -7.5, 11, 6.5, 0, 0, TAU); g.fillStyle = '#e2493a'; g.fill(); ol(g, 1.4);
+      g.fillStyle = '#ff8a72'; g.beginPath(); g.ellipse(-3, -10, 4, 1.8, -0.2, 0, TAU); g.fill();
+      [-1, 1].forEach(function (s) {
+        g.save(); g.translate(s * 10, -12); g.rotate(s * (0.4 + cl));
+        g.beginPath(); g.moveTo(0, 2); g.lineTo(s * 2, -3); g.strokeStyle = '#a3261d'; g.lineWidth = 2; g.stroke();
+        g.beginPath(); g.arc(s * 2.5, -6.5, 4, 0, TAU); g.fillStyle = '#e2493a'; g.fill(); ol(g, 1.2);
+        g.beginPath(); g.moveTo(s * 2.5, -6.5); g.lineTo(s * 6, -9); g.lineTo(s * 6.5, -5.5); g.closePath(); g.fillStyle = '#fff2e6'; g.fill();
+        g.restore();
+      });
+      g.beginPath(); g.moveTo(-3, -13); g.lineTo(-3.5, -17); g.moveTo(3, -13); g.lineTo(3.5, -17); g.strokeStyle = INK; g.lineWidth = 1.2; g.stroke();
+      eyes(g, -3.5, -18, 2.2, 0.5); eyes(g, 3.5, -18, 2.2, 0.5);
+      g.restore();
+    },
+    bat: function (g, e) {
+      flyerStart(g, e);
+      var f = Math.sin(e.ph * 3.2);
+      g.fillStyle = 'rgba(0,0,0,.15)'; g.beginPath(); g.ellipse(0, 18, 8, 2, 0, 0, TAU); g.fill();
+      [-1, 1].forEach(function (s) {
+        g.beginPath(); g.moveTo(s * 4, -2); g.quadraticCurveTo(s * 10, -10 * f - 5, s * 17, -6 * f - 1);
+        g.lineTo(s * 14, 1); g.lineTo(s * 11, -1); g.lineTo(s * 8, 3); g.closePath(); g.fillStyle = '#5b3d7a'; g.fill(); ol(g, 1.2);
+      });
+      g.beginPath(); g.ellipse(0, 0, 6.5, 7, 0, 0, TAU); g.fillStyle = '#7a52a3'; g.fill(); ol(g, 1.3);
+      g.beginPath(); g.moveTo(-5, -4); g.lineTo(-5, -11); g.lineTo(-1.5, -6); g.moveTo(5, -4); g.lineTo(5, -11); g.lineTo(1.5, -6); g.fillStyle = '#7a52a3'; g.fill(); ol(g, 1.1);
+      g.fillStyle = '#ffe14a'; g.beginPath(); g.arc(-2.3, -1.5, 1.8, 0, TAU); g.arc(2.6, -1.5, 1.8, 0, TAU); g.fill();
+      g.fillStyle = INK; g.beginPath(); g.arc(-2, -1.5, 0.8, 0, TAU); g.arc(2.9, -1.5, 0.8, 0, TAU); g.fill();
+      g.fillStyle = '#fff'; g.beginPath(); g.moveTo(-1.5, 2.5); g.lineTo(-0.8, 4.6); g.lineTo(-0.1, 2.5); g.moveTo(0.9, 2.5); g.lineTo(1.6, 4.6); g.lineTo(2.3, 2.5); g.fill();
+      g.restore();
+    },
+    bee: function (g, e) {
+      flyerStart(g, e);
+      var f = Math.sin(e.ph * 6);
+      g.fillStyle = 'rgba(0,0,0,.15)'; g.beginPath(); g.ellipse(0, 18, 8, 2, 0, 0, TAU); g.fill();
+      g.globalAlpha *= 0.75;
+      g.beginPath(); g.ellipse(-2, -8 - f, 4, 7, -0.5 + f * 0.3, 0, TAU); g.ellipse(3, -8 + f, 4, 7, 0.5 - f * 0.3, 0, TAU); g.fillStyle = '#dff4ff'; g.fill(); ol(g, 1);
+      g.globalAlpha /= 0.75;
+      g.beginPath(); g.moveTo(-11, 1); g.lineTo(-15, 2.5); g.lineTo(-10, 4); g.fillStyle = INK; g.fill();
+      g.save(); g.beginPath(); g.ellipse(-1, 1, 10, 6.5, 0, 0, TAU); g.fillStyle = '#ffc928'; g.fill(); g.clip();
+      g.fillStyle = INK; g.fillRect(-7, -6, 3, 14); g.fillRect(-1, -6, 3, 14); g.restore();
+      g.beginPath(); g.ellipse(-1, 1, 10, 6.5, 0, 0, TAU); ol(g, 1.3);
+      g.beginPath(); g.arc(8, 0, 4.5, 0, TAU); g.fillStyle = '#ffc928'; g.fill(); ol(g, 1.2);
+      g.beginPath(); g.moveTo(8, -4); g.quadraticCurveTo(9, -8, 12, -8.5); g.strokeStyle = INK; g.lineWidth = 1.1; g.stroke();
+      g.fillStyle = INK; g.beginPath(); g.arc(9.5, -0.5, 1.3, 0, TAU); g.fill();
+      g.beginPath(); g.moveTo(7.5, -2.6); g.lineTo(11, -1.8); g.lineWidth = 1.1; g.stroke();
+      g.restore();
+    },
+    rabbit: function (g, e) {
+      g.save(); g.translate(e.x + e.w / 2, e.y + e.h);
+      if (e.dead) { g.globalAlpha = Math.max(0, 1 - e.dead / 0.6); g.scale(1.35, Math.max(0.2, 0.4 - e.dead * 0.3)); }
+      var air = !e.ground, sq = e.ground ? 1 - Math.max(0, 0.25 - (e.hopT || 1)) * 1.6 : 1.12;
+      g.scale(e.dir > 0 ? 1 : -1, 1); g.scale(1 / Math.sqrt(sq), sq); g.lineJoin = 'round'; g.lineCap = 'round';
+      if (!air) { g.fillStyle = 'rgba(0,0,0,.2)'; g.beginPath(); g.ellipse(0, 0, 11, 2.4, 0, 0, TAU); g.fill(); }
+      g.beginPath(); g.ellipse(air ? -8 : -6, air ? 0 : -2, 5, 2.6, 0, 0, TAU); g.fillStyle = '#e9e4dc'; g.fill(); ol(g, 1);
+      g.beginPath(); g.arc(-9, -9, 3.2, 0, TAU); g.fillStyle = '#fff'; g.fill(); ol(g, 1);
+      g.beginPath(); g.ellipse(-1, -8, 9, 7, 0, 0, TAU); g.fillStyle = '#f7f4ef'; g.fill(); ol(g, 1.4);
+      var ear = air ? -0.5 : -0.25;
+      [[2, 0], [5.5, 0.35]].forEach(function (q) {
+        g.save(); g.translate(q[0], -13); g.rotate(ear + q[1]);
+        g.beginPath(); g.ellipse(0, -7, 2.8, 7.5, 0, 0, TAU); g.fillStyle = '#f7f4ef'; g.fill(); ol(g, 1.2);
+        g.beginPath(); g.ellipse(0, -7, 1.2, 5, 0, 0, TAU); g.fillStyle = '#ffb3c1'; g.fill(); g.restore();
+      });
+      eyes(g, 4.5, -10, 2.2, 0.6);
+      g.fillStyle = '#ff7a96'; g.beginPath(); g.arc(8, -7.5, 1.3, 0, TAU); g.fill();
+      g.fillStyle = 'rgba(255,140,160,.45)'; g.beginPath(); g.arc(5, -6.5, 2, 0, TAU); g.fill();
+      g.restore();
+    },
+    shroom: function (g, e) {
+      walkerStart(g, e);
+      var st = Math.sin(e.ph * 1.4) * 1.5, wb = Math.sin(e.ph * 0.7) * 0.06;
+      g.fillStyle = '#3b2a1e'; g.beginPath(); g.ellipse(-4 + st, -1.5, 2.6, 1.8, 0, 0, TAU); g.ellipse(4 - st, -1.5, 2.6, 1.8, 0, 0, TAU); g.fill();
+      g.beginPath(); g.moveTo(-6, -2); g.quadraticCurveTo(-7, -9, -5, -11); g.lineTo(5, -11); g.quadraticCurveTo(7, -9, 6, -2); g.closePath(); g.fillStyle = '#f3ead8'; g.fill(); ol(g, 1.3);
+      g.save(); g.rotate(wb);
+      g.beginPath(); g.moveTo(-13, -10); g.quadraticCurveTo(-13, -24, 0, -24); g.quadraticCurveTo(13, -24, 13, -10); g.quadraticCurveTo(0, -7, -13, -10); g.fillStyle = '#9b3fd1'; g.fill(); ol(g, 1.5);
+      g.fillStyle = '#e9d6ff'; [[-6, -17, 2.6], [3, -20, 2.2], [8, -14, 1.8], [-1, -13, 1.6]].forEach(function (d) { g.beginPath(); g.arc(d[0], d[1], d[2], 0, TAU); g.fill(); });
+      g.restore();
+      eyes(g, -1.8, -6.5, 1.9, 0.5); eyes(g, 3, -6.5, 1.9, 0.5);
+      g.beginPath(); g.moveTo(-1, -3.6); g.lineTo(0.5, -4.4); g.lineTo(2, -3.6); g.strokeStyle = INK; g.lineWidth = 1; g.stroke();
+      g.restore();
+    }
+  };
+  // 스테이지에 몬스터가 너무 적으면 빈 땅·하늘에 더 넣어요 (시작 지점 · 등불 · 깃발 근처는 피해요)
+  function extraSpawn() {
+    try {
+      if (E('ENDLESS') || E('boss')) return;
+      var sn = E('stageIdx') + 1; if (sn < 3) return;
+      var en = E('enemies'), g = E('grid'), T = E('T'), R = E('ROWS'), C = E('COLS'), sp = E('startPos'), cps = E('cps') || [], goal = E('goal');
+      var dd = window.__cnDiff ? window.__cnDiff() : { add: 0 };
+      if (dd.add < 0) { for (var q = en.length - 1, cut = Math.floor(en.length / 3); q >= 0 && cut > 0; q--) if (q % 2 === 0) { en.splice(q, 1); cut--; } }   // 쉬움: 원래 몬스터도 조금 줄여요
+      var need = Math.max(sn < 10 ? 1 : 2, Math.min(10, 2 + Math.floor(sn / 30) + dd.add)) - en.length; if (need <= 0) return;
+      var seed = (sn * 7919) % 233280; function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+      function at(x, y) { return y < 0 || y >= R || x < 0 || x >= C ? '#' : g[y][x]; }
+      function gnd(x, y) { var c = at(x, y); return c === '#' || c === 'T' || c === '='; }
+      var avoid = [sp].concat(cps).concat(goal ? [goal] : []);
+      function far(px, py, d) {
+        for (var i = 0; i < avoid.length; i++) if (avoid[i] && Math.abs(avoid[i].x - px) + Math.abs(avoid[i].y - py) < d) return false;
+        for (var j = 0; j < en.length; j++) if (Math.abs(en[j].x - px) + Math.abs(en[j].y - py) < 3 * T) return false;
+        return true;
+      }
+      var walk = [], fly = [];
+      for (var y = 1; y < R - 1; y++) for (var x = 1; x < C - 1; x++) {
+        if (at(x, y) !== '.' || at(x, y - 1) !== '.' || at(x - 1, y) !== '.' || at(x + 1, y) !== '.') continue;
+        if (gnd(x, y + 1) && gnd(x - 1, y + 1) && gnd(x + 1, y + 1)) walk.push([x, y]);
+        else if (at(x, y + 1) === '.' && at(x - 1, y - 1) === '.' && at(x + 1, y - 1) === '.' && at(x, y + 2) === '.') fly.push([x, y]);
+      }
+      var pool = ['tanuki', 'tanuki', 'crow'];
+      if (sn >= 5) pool.push('frog'); if (sn >= 10) pool.push('hedgehog'); if (sn >= 20) pool.push('crow'); if (sn >= 40) pool.push('hedgehog');
+      var tries = 0;
+      while (need > 0 && tries++ < 40) {
+        var k = pool[Math.floor(rnd() * pool.length)], air = k === 'crow' || k === 'ghost', L = air ? fly : walk;
+        if (!L.length) continue;
+        var s = L.splice(Math.floor(rnd() * L.length), 1)[0], px = s[0] * T + T / 2, py = (s[1] + 1) * T;
+        if (!far(px, py, 6 * T)) continue;
+        var e;
+        if (k === 'tanuki') e = { k: k, x: s[0] * T + 4, y: (s[1] + 1) * T - 20, w: 22, h: 20, vx: rnd() < 0.5 ? -48 : 48 };
+        else if (k === 'hedgehog') e = { k: k, x: s[0] * T + 4, y: (s[1] + 1) * T - 16, w: 22, h: 16, vx: rnd() < 0.5 ? -34 : 34 };
+        else if (k === 'frog') e = { k: k, x: s[0] * T + 5, y: (s[1] + 1) * T - 16, w: 20, h: 16, vx: 0, vy: 0, dir: rnd() < 0.5 ? -1 : 1, hopT: 0.6 + rnd(), ground: true };
+        else if (k === 'crow') e = { k: k, x: s[0] * T + 3, y: s[1] * T + 7, y0: s[1] * T + 7, w: 24, h: 16, vx: rnd() < 0.5 ? -72 : 72 };
+        else e = { k: k, x: s[0] * T + 5, y: s[1] * T + 5, y0: s[1] * T + 5, w: 20, h: 20, vx: 0 };
+        e.dead = 0; e.ph = rnd() * 6; e.__extra = 1;
+        en.push(e); need--;
+      }
+    } catch (_) {}
+  }
+  window.__cnDrawVar = function (g, e) { var f = DRAW[e.cv]; if (!f) return false; f(g, e); return true; };
+  var hook = setInterval(function () {
+    var ok; try { ok = ['drawTanuki', 'drawCrow', 'drawHedgehog', 'drawFrogE', 'drawGhostE'].every(function (n) { return typeof E(n) === 'function'; }) && E('ctx'); } catch (_) { ok = false; }
+    if (!ok) return; clearInterval(hook);
+    ['drawTanuki', 'drawCrow', 'drawHedgehog', 'drawFrogE', 'drawGhostE'].forEach(function (n) {
+      var o = E(n);
+      window[n] = function (e) {
+        if (e && e.cv && DRAW[e.cv]) { try { DRAW[e.cv](E('ctx'), e); return; } catch (_) {} }
+        return o.apply(this, arguments);
+      };
+    });
+    var oStart = E('startStage');
+    window.startStage = function () { var r = oStart.apply(this, arguments); extraSpawn(); return r; };
+    // 새로 나온 몬스터를 스테이지에 맞춰 새 종류로 바꿔요
+    (function loop() {
+      try {
+        var en = E('enemies');
+        if (en && en.length) {
+          var sn = stageNo();
+          for (var i = 0; i < en.length; i++) {
+            var e = en[i]; if (e.__cvc) continue; e.__cvc = 1; if (e.dead) continue;
+            var opts = VAR.filter(function (v) { return v.base === e.k && sn >= v.from; });
+            for (var j = opts.length - 1; j >= 0; j--) {
+              if (Math.random() < opts[j].p) { e.cv = opts[j].cv; if (e.vx && opts[j].sp !== 1) e.vx *= opts[j].sp; break; }
+            }
+          }
+        }
+      } catch (_) {}
+      requestAnimationFrame(loop);
+    })();
+  }, 300);
+})();
+
 // ── 표창 던지기(애니메이션 없이) + 도감 + 친구 ──
 (function () {
   var E = function (s) { return (0, eval)(s); };
@@ -3387,7 +3609,7 @@
     { k: 'frog', n: '뜀뛰기 개구리', d: '갑자기 폴짝 뛰어올라요' },
     { k: 'hedgehog', n: '가시 고슴도치', d: '위에서 밟으면 아파요' },
     { k: 'crow', n: '까마귀', d: '하늘을 가로질러 날아요' }
-  ];
+  ].concat((window.__cnMonVar || []).map(function (v) { return { k: v.cv, base: v.base, n: v.n, d: v.d }; }));
   var BOSS = [
     { n: '너구리 장군', c: '#ff6a5a' }, { n: '도토리 대장', c: '#c98a3e' }, { n: '점프 대왕', c: '#4fc36b' }, { n: '북치기 대마왕', c: '#a66bff' }
   ];
@@ -3400,7 +3622,7 @@
       var cv = E('cv'), ctx = E('ctx'), b = E('dpr') * E('scale'), de = E('drawEnemy');
       MON.forEach(function (m, i) {
         if (pics[m.k]) return;
-        var e = { k: m.k, x: 20, y: 20, y0: 20, w: m.k === 'crow' ? 24 : 22, h: m.k === 'frog' || m.k === 'hedgehog' || m.k === 'crow' ? 16 : 20, vx: -1, vy: 0, dir: -1, dead: 0, ph: 1, ground: true, hopT: 1 };
+        var bk = m.base || m.k, e = { k: bk, cv: m.base ? m.k : undefined, x: 20, y: 20, y0: 20, w: bk === 'crow' ? 24 : bk === 'ghost' ? 20 : 22, h: bk === 'frog' || bk === 'hedgehog' || bk === 'crow' ? 16 : 20, vx: -1, vy: 0, dir: -1, dead: 0, ph: 1, ground: true, hopT: 1 };
         ctx.save(); ctx.setTransform(b, 0, 0, b, 0, 0); ctx.clearRect(0, 0, 64, 64); de(e); ctx.restore();
         var out = document.createElement('canvas'); out.width = 120; out.height = 100;
         var c2 = out.getContext('2d'); c2.imageSmoothingEnabled = true; c2.drawImage(cv, 4 * b, 2 * b, 56 * b, 46 * b, 0, 0, 120, 100);
@@ -3452,7 +3674,7 @@
         var en = E('enemies');
         if (en && E('mode') === 'play') for (var i = 0; i < en.length; i++) {
           var e = en[i]; if (!e.dead || e.__cnDex || !e.k) continue; e.__cnDex = 1;
-          var D = dex(), first = !D.m[e.k]; D.m[e.k] = (D.m[e.k] || 0) + 1;
+          var dk = e.cv || e.k, D = dex(), first = !D.m[dk]; D.m[dk] = (D.m[dk] || 0) + 1;
           if (first) setTimeout(function () { toast('도감에 새 몬스터가 등록됐어요!'); }, 300);
         }
       } catch (_) {}
@@ -3634,4 +3856,74 @@
     last = now; requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
+})();
+
+// ── 난이도: 쉬움 · 보통 · 어려움 (로비와 설정에서 바꿔요) ──
+(function () {
+  var E = function (s) { return (0, eval)(s); };
+  var I = function (n) { return window.__cnI ? window.__cnI(n) : ''; };
+  var D = {
+    easy: { n: '쉬움', c: '#3fbf6a', sp: 0.7, add: -1, d: '몬스터가 적고 느려요' },
+    normal: { n: '보통', c: '#2f7fd6', sp: 1, add: 0, d: '원래 난이도예요' },
+    hard: { n: '어려움', c: '#e0482f', sp: 1.35, add: 2, d: '몬스터가 많고 빨라요 · 깰 때마다 엽전 +3' }
+  };
+  var ORDER = ['easy', 'normal', 'hard'];
+  function cur() { try { var k = E('save').cnDiff; return D[k] ? k : 'normal'; } catch (_) { return 'normal'; } }
+  function setDiff(k) { try { E('save').cnDiff = k; E('persist')(); } catch (_) {} paint(); }
+  window.__cnDiff = function () { return D[cur()]; };
+  function sfx() { try { E('SFX').click(); } catch (_) {} }
+  function toast(t, c) { try { E('showToast')(t, c || '#ffe27a'); } catch (_) {} }
+
+  var css = document.createElement('style');
+  css.textContent = '#cnDiffChip{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 auto 8px;padding:5px 14px;border:2.5px solid #141418;border-radius:999px;background:#fffaf0;box-shadow:0 3px 0 #141418;font:inherit;font-size:14px;color:#141418;cursor:pointer;width:max-content}' +
+    '#cnDiffChip b{color:#fff;border-radius:999px;padding:1px 10px;-webkit-text-stroke:0}#cnDiffChip small{color:#8a8270}';
+  document.head.appendChild(css);
+  var chip = null;
+  function paint() {
+    var d = D[cur()];
+    if (chip) chip.innerHTML = '난이도 <b style="background:' + d.c + '">' + d.n + '</b><small>바꾸기</small>';
+  }
+  function cycle() {
+    var k = ORDER[(ORDER.indexOf(cur()) + 1) % 3]; setDiff(k); sfx();
+    toast('난이도: ' + D[k].n + ' · ' + D[k].d, D[k].c === '#e0482f' ? '#ff9a8a' : '#ffe27a');
+  }
+  setInterval(function () {
+    var menu = document.getElementById('cnMenu');
+    if (!menu || (chip && chip.isConnected)) return;
+    chip = document.createElement('button'); chip.id = 'cnDiffChip'; chip.type = 'button';
+    chip.addEventListener('click', cycle);
+    menu.parentNode.insertBefore(chip, menu); paint();
+  }, 500);
+
+  var hook = setInterval(function () {
+    var cs, set; try { cs = E('clearStage'); set = E('openSettings'); } catch (_) { return; }
+    if (typeof cs !== 'function' || typeof set !== 'function') return; clearInterval(hook);
+    // 어려움으로 깨면 엽전 +3 (엽전 줄이기가 끝난 뒤에 줘요)
+    window.clearStage = function () {
+      var endless = false; try { endless = E('ENDLESS'); } catch (_) {}
+      var r = cs.apply(this, arguments);
+      if (!endless && cur() === 'hard') setTimeout(function () { try { var sv = E('save'); sv.coins += 3; E('persist')(); var w = document.getElementById('wallet'); if (w) w.textContent = sv.coins; } catch (_) {} toast('어려움 보너스 엽전 +3', '#ff9a8a'); }, 0);
+      return r;
+    };
+    window.openSettings = function () {
+      var r = set.apply(this, arguments);
+      try {
+        var body = document.getElementById('sheetBody'), note = body && body.querySelector('.note');
+        var row = document.createElement('div'); row.className = 'tog';
+        function draw() { var d = D[cur()]; row.innerHTML = '난이도 <span style="font-size:15px;font-weight:bold;color:' + d.c + '">' + d.n + ' ▸</span>'; }
+        draw(); row.addEventListener('click', function () { cycle(); draw(); });
+        if (body) { if (note) body.insertBefore(row, note); else body.appendChild(row); }
+      } catch (_) {}
+      return r;
+    };
+  }, 300);
+
+  // 몬스터 속도를 난이도에 맞춰요 (새로 나온 몬스터마다 한 번만)
+  (function loop() {
+    try {
+      var en = E('enemies'), sp = D[cur()].sp;
+      if (en) for (var i = 0; i < en.length; i++) { var e = en[i]; if (e.__df) continue; e.__df = 1; if (sp !== 1 && e.vx && !e.dead) e.vx *= sp; if (sp !== 1 && e.hopT) e.hopT /= sp; }
+    } catch (_) {}
+    requestAnimationFrame(loop);
+  })();
 })();
