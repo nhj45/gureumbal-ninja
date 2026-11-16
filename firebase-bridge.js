@@ -2866,3 +2866,27 @@
     setInterval(function () { try { renderProg(); } catch (_) {} }, 1200);
   }, 300);
 })();
+
+// ── 떨어져도 다시 안 올라가게: 체크포인트보다 4칸 넘게 아래에 착지하면 체크포인트로 바로 돌아가요 ──
+(function () {
+  var E = function (s) { return (0, eval)(s); };
+  var cool = 0;
+  (function tick() {
+    try {
+      if (E('mode') === 'play' && !E('ENDLESS')) {
+        var p = E('P'), rp = E('respawn'), T = E('T');
+        if (cool > 0) cool--;
+        else if (p && rp && !p.dead && p.onGround && p.y + p.h > rp.y + 4 * T) {
+          var np = E('newPlayer')(rp);
+          E('puff')(p.x + p.w / 2, p.y + p.h / 2, 10, '#ffffff', 80, 6);
+          p.x = np.x; p.y = np.y; p.vx = 0; p.vy = 0; p.invT = Math.max(p.invT || 0, 0.8);
+          try { p.airJumps = E('maxAir')(p); } catch (_) {}
+          E('puff')(rp.x, rp.y - 13, 12, '#ffffff', 90, 7); E('ring')(rp.x, rp.y - 12, 'rgba(255,220,140,.9)', 24);
+          try { E('showToast')('체크포인트로 휙!', '#ffd59a'); E('SFX').cp(); } catch (_) {}
+          cool = 30;
+        }
+      }
+    } catch (_) {}
+    requestAnimationFrame(tick);
+  })();
+})();
