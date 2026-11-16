@@ -2038,10 +2038,10 @@
     var set = function (r, c, ch) { if (r > 0 && r < N && c >= 1 && c <= 10) rows[r][c] = ch; };
     var free = function (r, c) { return r > 0 && r < N && c >= 1 && c <= 10 && rows[r][c] === '.'; };
     set(1, 3, 'P'); set(1, 6, 'o'); set(1, 8, 'o');
-    var y = 0, L = 1, Rr = 10, lastCP = 0, top = pf.boss ? N - 14 : N - 6;
+    var justSpike = false, y = 0, L = 1, Rr = 10, lastCP = 0, top = pf.boss ? N - 14 : N - 6;
     var scrollAt = [Math.floor(top * 0.3), Math.floor(top * 0.6), Math.floor(top * 0.88)], sIdx = 0;
     while (y < top - 5) {
-      var r = R(), acc = 0;
+      var r = R(), acc = 0, wasSpike = justSpike; justSpike = false;
       if (y > 8 && r < (acc += w.spring)) {
         var c0 = Math.max(1, Math.min(10, L + Math.floor(R() * (Rr - L + 1))));
         set(y + 3, c0, 'T'); for (k = 2; k <= 6; k += 2) set(y + 3 + k, c0, 'o');
@@ -2049,7 +2049,7 @@
         L = st0; Rr = st0 + 2; y += 12; continue;
       }
       if (y > 12 && r < (acc += w.move)) { set(y + 3, 1 + Math.floor(R() * 8), 'M'); if (R() < 0.7) set(y + 5, 1 + Math.floor(R() * 10), 'o'); L = 1; Rr = 10; y += 3; continue; }
-      if (y > 16 && r < (acc += w.wall) && L <= 5) {
+      if (y > 16 && r < (acc += w.wall) && L <= 5 && !wasSpike) {   // 가시 바닥 바로 뒤에는 벽 타기 구간을 두지 않아요 (빠져나갈 길이 막혀요)
         for (k = 1; k <= 3; k++) set(y + 3, k, '=');
         for (k = 1; k <= 9; k++) set(y + 3 + k, 3, '#');
         set(y + 6, 1, 'o'); set(y + 9, 2, 'o');
@@ -2068,7 +2068,7 @@
         else { a0 = Math.max(Rr + 1, 4); a1 = 10; s0 = a0; }                              // 오른쪽 벽에 붙은 가시 바닥 (안전한 칸은 왼쪽 끝)
         for (k = a0; k <= a1; k++) { set(ny2, k, '#'); if (k < s0 || k >= s0 + safe) set(ny2 + 1, k, '^'); }
         if (free(ny2 + 1, s0)) set(ny2 + 1, s0, 'o');
-        L = s0; Rr = s0 + safe - 1; y = ny2; continue;
+        L = s0; Rr = s0 + safe - 1; y = ny2; justSpike = true; continue;
       }
       var len = 2 + Math.floor(R() * (3 - Math.round(d * 0.8)));
       var gap = R() < 0.12 + 0.28 * d ? 4 : 3, ny = y + gap;
@@ -2124,7 +2124,8 @@
     var html = '<div class="note" style="margin:0 0 8px">열린 스테이지 ' + Math.min(save.unlocked || 1, S.length) + ' / ' + S.length + '</div>' + nav;
     for (var i = pg * per; i < Math.min(S.length, (pg + 1) * per); i++) {
       var s = S[i], locked = i + 1 > save.unlocked, b = save.best['s' + i];
-      var right = locked ? ic('lock') : b ? '<b style="color:' + (RANKS[b.rank].c === '#7b8494' ? '#fff' : '#fff3a0') + '">' + RANKS[b.rank].n + '</b>' + fmtTime(b.time) + ' · 📜' + b.scrolls + '/3' : '<b>NEW</b>도전!';
+      var RK = b && (RANKS[b.rank] || RANKS[RANKS.length - 1] || { c: '#7b8494', n: '-' });   // 기록이 이상해도 목록이 멈추지 않게
+      var right = locked ? ic('lock') : b ? '<b style="color:' + (RK.c === '#7b8494' ? '#fff' : '#fff3a0') + '">' + RK.n + '</b>' + fmtTime(b.time || 0) + ' · 📜' + (b.scrolls || 0) + '/3' : '<b>NEW</b>도전!';
       html += '<div class="st' + (locked ? ' locked' : '') + '" data-i="' + i + '" style="background:' + BG[s.theme] + '"><div class="no">' + (i + 1) + '</div><div><div class="nm">' + s.name + '</div><div class="sb">' + s.sub + '</div></div><div class="rk">' + right + '</div></div>';
     }
     E('openSheet')(ic('scroll') + '스테이지', html);
@@ -2797,5 +2798,71 @@
       } catch (_) {}
       return r;
     };
+  }, 300);
+})();
+
+// ── UI 다듬기 + 재미: 로비 아이콘 메뉴, 수련 진행도와 25판마다 보상 ──
+(function () {
+  var E = function (s) { return (0, eval)(s); };
+  function sfx(n) { try { E('SFX')[n || 'click'](); } catch (_) {} }
+  function today() { return new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10); }
+  function persist() { try { E('persist')(); } catch (_) {} try { E('refreshLobby')(); } catch (_) {} try { var w = document.getElementById('wallet'); if (w) w.textContent = E('save').coins; } catch (_) {} }
+  function toast(t) { try { E('showToast')(t, '#ffe27a'); } catch (_) {} }
+  var css = document.createElement('style');
+  css.textContent = [
+    '#cnMenu{display:flex;flex-direction:column;gap:8px;width:100%}.cnMrow{display:flex;gap:8px}.cnMrow .mid{flex:1}',
+    '#cnMenu .mid{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:9px 2px 8px !important;min-height:66px;font-size:13.5px !important;border-radius:16px !important;line-height:1.15;letter-spacing:-.3px}',
+    '#cnMenu .mid .lbl{display:flex;flex-direction:column;align-items:center;gap:3px}',
+    '#cnMenu .mid .ic{width:26px !important;height:26px !important;margin:0 !important}',
+    '#cnMenu .mid .em{font-size:24px;line-height:26px;height:26px}',
+    '#cnMenu .mid small{font-size:10.5px !important;margin:0 !important}',
+    '#cnMenu .mid .dot{position:absolute;top:5px;right:7px}',
+        '#cnMenu .mid.bz{background:linear-gradient(#ffe0d6,#ffb39c) !important;color:#6b1d0e !important}',
+    '#cnProg{width:100%;box-sizing:border-box;display:flex;align-items:center;gap:8px;background:rgba(20,20,24,.55);border-radius:14px;padding:7px 10px;color:#fff;font-size:13.5px}',
+    '#cnProg .bar{flex:1;height:10px;border-radius:6px;background:rgba(255,255,255,.2);overflow:hidden}#cnProg .bar i{display:block;height:100%;background:linear-gradient(90deg,#7dffa0,#3ccf6e);border-radius:6px;transition:width .4s}',
+    '#cnProg button{border:2px solid #141418;border-radius:10px;background:#ffd23f;font:inherit;font-size:13px;padding:3px 8px;color:#3a2400;animation:chestWob .6s ease-in-out infinite alternate;cursor:pointer}',
+    '#cnProg .nx{opacity:.8;font-size:12px;white-space:nowrap}',
+    '@keyframes chestWob{from{transform:rotate(-2deg) scale(1)}to{transform:rotate(2deg) scale(1.04)}}'
+  ].join('');
+  document.head.appendChild(css);
+
+  // ───── 수련 진행도 + 25판마다 보상 ─────
+  var MILE = 25, MREW = 100;
+  function cleared() { var b = E('save').best || {}, n = 0; for (var i = 0; i < 250; i++) if (b['s' + i]) n++; return n; }
+  function renderProg() {
+    var el = document.getElementById('cnProg'); if (!el) return;
+    var sv = E('save'), n = cleared(), got = sv.cnMile || 0, can = Math.floor(n / MILE) > got, nextAt = (got + 1) * MILE;
+    var html = '<span>🏯 ' + n + '/250</span><div class="bar"><i style="width:' + (n / 2.5) + '%"></i></div>' +
+      (can ? '<button id="cnMileBtn">🎁 ' + (got + 1) * MILE + '판 보상</button>' : (nextAt <= 250 ? '<span class="nx">🎁 ' + nextAt + '판까지 ' + (nextAt - n) + '판</span>' : '<span class="nx">👑 완주!</span>'));
+    if (el.__h !== html) { el.innerHTML = html; el.__h = html; }
+  }
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest || !e.target.closest('#cnMileBtn')) return;
+    var sv = E('save'); if (Math.floor(cleared() / MILE) <= (sv.cnMile || 0)) return;
+    sv.cnMile = (sv.cnMile || 0) + 1; sv.coins += MREW; persist(); sfx('coin'); toast('🎁 ' + sv.cnMile * MILE + '판 달성! 엽전 +' + MREW); renderProg();
+  });
+
+  // ───── 로비 아이콘 메뉴 ─────
+  var build = setInterval(function () {
+    var box = document.querySelector('#lobby .lobbyBtns'), ids = ['btnTower', 'btnAch', 'btnStages', 'btnRank', 'btnBz', 'btnDaily', 'btnVillage'];
+    if (!box || ids.some(function (id) { return !document.getElementById(id); })) return; clearInterval(build);
+    var menu = document.createElement('div'); menu.id = 'cnMenu';
+    var r1 = document.createElement('div'), r2 = document.createElement('div'); r1.className = r2.className = 'cnMrow'; menu.appendChild(r1); menu.appendChild(r2);
+    var label = { btnAch: '미션', btnBz: ['⚔️', '광전사'], btnDaily: ['📅', '오늘의 도전'], btnVillage: ['🗿', '동상 마을'] };
+    ids.forEach(function (id) {
+      var b = document.getElementById(id), row = b.parentNode, l = b.querySelector('.lbl'), L = label[id];
+      if (l && Array.isArray(L)) l.innerHTML = '<span class="em">' + L[0] + '</span>' + L[1];
+      else if (l && L) { var ic = l.querySelector('i,svg'); l.textContent = ''; if (ic) l.appendChild(ic); l.appendChild(document.createTextNode(L)); }
+      if (id === 'btnBz') b.classList.add('bz');
+      (ids.indexOf(id) < 4 ? r1 : r2).appendChild(b);
+      if (row && row !== box && !row.children.length) row.remove();
+    });
+    // 위 줄: 탑 미션 스테이지 랭킹 / 아래 줄: 광전사 오늘의 도전 동상 마을
+    var play = document.getElementById('btnPlay'), prog = document.createElement('div'); prog.id = 'cnProg';
+    if (play && play.nextSibling) box.insertBefore(prog, play.nextSibling); else box.appendChild(prog);
+    box.insertBefore(menu, prog.nextSibling);
+    box.querySelectorAll('.row').forEach(function (rw) { if (!rw.children.length) rw.remove(); });
+    renderProg();
+    setInterval(function () { try { renderProg(); } catch (_) {} }, 1200);
   }, 300);
 })();
