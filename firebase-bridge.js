@@ -782,22 +782,22 @@
   var evalg = function (code) { try { return (0, eval)(code); } catch (_) { return undefined; } };
   function S() { return g('save') || {}; }
   function inv() { var s = S(); s.cnItems = s.cnItems || {}; return s.cnItems; }
-  window.__cnFb = function () { return fb(); }; window.__cnOwned = function (k) { return owned(k); };
+  window.__cnNinjas = function () { return NINJAS; }; window.__cnPrev = function (id) { try { var v = charPreview(id); return typeof v === 'string' ? v : ''; } catch (_) { return ''; } }; window.__cnFb = function () { return fb(); }; window.__cnOwned = function (k) { return owned(k); };
   function owned(kind) { var s = S(); s.cnOwn = s.cnOwn || {}; s.cnOwn[kind] = s.cnOwn[kind] || ['basic', '']; if (kind === 'char' && ADMIN && s.cnOwn.char.indexOf('ninjo') < 0) s.cnOwn.char.push('ninjo'); return s.cnOwn[kind]; }
   function save2() { try { g('persist')(); g('refreshLobby')(); } catch (_) {} }
   var swatch = function (c) { return c === 'rainbow' ? 'conic-gradient(#ff4a4a,#ffd84a,#4fd27a,#4aa8ff,#b48cff,#ff4a4a)' : 'rgb(' + c.join(',') + ')'; };
 
   // 닌자 모습: 캐릭터(몸 · 머리띠 · 허리띠 색 + 이마 문양)와 허리띠 색을 그림에 직접 칠해요
   var NINJAS = [
-    { id: 'basic', name: '검은 닌자', price: 0, d: '처음부터 함께한 하찮은 닌자' },
-    { id: 'snow', name: '눈송이 닌자', price: 300, body: [226, 232, 244], band: [120, 190, 255], belt: [60, 120, 230], em: 'snow', d: '눈처럼 하얀 수련복' },
-    { id: 'fire', name: '불꽃 닌자', price: 300, body: [196, 48, 52], band: [255, 160, 60], belt: [255, 214, 70], em: 'flame', d: '성격이 급해서 늘 먼저 뛰어요' },
-    { id: 'wave', name: '파도 닌자', price: 400, body: [44, 96, 186], band: [110, 220, 240], belt: [240, 248, 255], em: 'drop', d: '물 위도 걸을 수 있다고 우겨요' },
-    { id: 'bamboo', name: '대나무 닌자', price: 400, body: [46, 138, 74], band: [170, 230, 90], belt: [140, 90, 50], em: 'leaf', d: '대나무 숲에서 자란 닌자' },
-    { id: 'bolt', name: '번개 닌자', price: 600, body: [232, 176, 32], band: [60, 60, 70], belt: [140, 80, 220], em: 'bolt', d: '대시가 제일 빠를 것 같은 느낌' },
-    { id: 'sakura', name: '벚꽃 닌자', price: 600, body: [232, 122, 168], band: [255, 246, 250], belt: [220, 50, 80], em: 'flower', d: '지나간 자리에 꽃잎이 날려요(기분상)' },
-    { id: 'shadow', name: '그림자 닌자', price: 900, body: [80, 52, 132], band: [190, 150, 255], belt: [255, 205, 50], em: 'moon', d: '밤에만 진지해지는 닌자' },
-    { id: 'gold', name: '황금 닌자', price: 1500, body: [212, 160, 46], band: [255, 243, 176], belt: [200, 40, 50], em: 'crown', d: '엽전을 너무 많이 모아서 금이 됐어요' },
+    { id: 'basic', name: '검은 닌자', price: 0, d: '처음부터 함께한 하찮은 닌자 · 능력 없음' },
+    { id: 'snow', name: '눈송이 닌자', price: 300, body: [226, 232, 244], band: [120, 190, 255], belt: [60, 120, 230], em: 'snow', d: '눈처럼 하얀 수련복 · 능력: 벽 점프가 더 높아요' },
+    { id: 'fire', name: '불꽃 닌자', price: 300, body: [196, 48, 52], band: [255, 160, 60], belt: [255, 214, 70], em: 'flame', d: '성격이 급해서 늘 먼저 뛰어요 · 능력: 달리기가 15% 빨라요' },
+    { id: 'wave', name: '파도 닌자', price: 400, body: [44, 96, 186], band: [110, 220, 240], belt: [240, 248, 255], em: 'drop', d: '물 위도 걸을 수 있다고 우겨요 · 능력: 점프가 더 높아요' },
+    { id: 'bamboo', name: '대나무 닌자', price: 400, body: [46, 138, 74], band: [170, 230, 90], belt: [140, 90, 50], em: 'leaf', d: '대나무 숲에서 자란 닌자 · 능력: 공중에서 한 번 더 점프 (3단 점프)' },
+    { id: 'bolt', name: '번개 닌자', price: 600, body: [232, 176, 32], band: [60, 60, 70], belt: [140, 80, 220], em: 'bolt', d: '대시가 제일 빠를 것 같은 느낌 · 능력: 대시가 더 빠르고 멀리' },
+    { id: 'sakura', name: '벚꽃 닌자', price: 600, body: [232, 122, 168], band: [255, 246, 250], belt: [220, 50, 80], em: 'flower', d: '지나간 자리에 꽃잎이 날려요(기분상) · 능력: 근처 엽전이 끌려와요' },
+    { id: 'shadow', name: '그림자 닌자', price: 900, body: [80, 52, 132], band: [190, 150, 255], belt: [255, 205, 50], em: 'moon', d: '밤에만 진지해지는 닌자 · 능력: 판마다 그림자 방패 1번' },
+    { id: 'gold', name: '황금 닌자', price: 1500, body: [212, 160, 46], band: [255, 243, 176], belt: [200, 40, 50], em: 'crown', d: '엽전을 너무 많이 모아서 금이 됐어요 · 능력: 판에서 줍는 엽전 1.5배' },
     { id: 'ninjo', name: '닌죠', price: 0, admin: true, body: [38, 50, 92], band: [246, 246, 250], belt: [176, 28, 40], em: 'swords', d: '칼 세 자루를 쓰는 검술 닌자 · 세 칼 베기 · 베기 대시 · 기합 소리' }
   ];
   var sprOrig = null, sprCache = {};
@@ -956,6 +956,7 @@
     if (eq) return '<button class="shp-b on" disabled>쓰는 중</button>';
     if (own) return '<button class="shp-b own" data-eq="' + kind + ':' + item.id + '">쓰기</button>';
     if (item.admin) return '<button class="shp-b no" disabled style="font-size:12px">관리자 선물</button>';
+    if (kind === 'char') return '<button class="shp-b no" disabled style="font-size:11.5px;line-height:1.15">떠돌이<br>상인에게서</button>';   // 캐릭터는 맵에 가끔 나오는 상인에게서만 사요
     var no = (S().coins || 0) < item.price ? ' no' : '';
     return '<button class="shp-b' + no + '" data-buy="' + kind + ':' + item.id + '"><i class="coin sm"></i>' + item.price + '</button>';
   }
@@ -970,7 +971,7 @@
       body += '<div class="shp-list">' + NINJAS.map(function (x) {
         var own = oC.indexOf(x.id) >= 0, pv = x.id === 'basic' ? (sprOrig ? sprOrig.run[0].src : '') : charPreview(x.id);
         return '<div class="shp-it' + (curC === x.id ? ' eq' : '') + '"><img class="shp-pv" data-prev="' + x.id + '" src="' + (typeof pv === 'string' ? pv : '') + '" alt=""><div class="shp-tx"><b>' + x.name + '</b><small>' + x.d + '</small></div>' + priceBtn(x, 'char', curC === x.id, own) + '</div>';
-      }).join('') + '</div><div class="shp-note">캐릭터는 모습만 바뀌어요. 허리띠 색을 따로 사면 그 색이 먼저 보여요.</div>';
+      }).join('') + '</div><div class="shp-note">캐릭터는 스테이지에 가끔 나타나는 <b>떠돌이 상인</b>에게서만 살 수 있어요. 캐릭터마다 특수능력이 있어요. 허리띠 색을 따로 사면 그 색이 먼저 보여요.</div>';
     } else if (shopTab2 === 'scarf') {
       var oS = owned('scarf'), cur = s.cnScarf || 'basic';
       body += '<div class="shp-list">' + SCARVES.map(function (x) { var own = oS.indexOf(x.id) >= 0; return '<div class="shp-it' + (cur === x.id ? ' eq' : '') + '"><span class="shp-sw" style="background:' + swatch(x.a) + '"></span><div class="shp-tx"><b>' + x.name + '</b><small>닌자 허리띠와 휘날리는 끈 색</small></div>' + priceBtn(x, 'scarf', cur === x.id, own) + '</div>'; }).join('') + '</div>';
@@ -3138,4 +3139,166 @@
     }
     rk.addEventListener('click', function () { [80, 600, 1500, 3000].forEach(function (ms) { setTimeout(addWk, ms); }); });
   }, 400);
+})();
+
+// ── 캐릭터 특수능력 + 떠돌이 상인 (캐릭터는 상인에게서만 사요, 관리자 캐릭터 제외) ──
+(function () {
+  var E = function (s) { return (0, eval)(s); };
+  var I = function (n) { return window.__cnI ? window.__cnI(n) : ''; };
+  function sfx(n) { try { E('SFX')[n || 'click'](); } catch (_) {} }
+  function persist() { try { E('persist')(); } catch (_) {} try { E('refreshLobby')(); } catch (_) {} try { var w = document.getElementById('wallet'); if (w) w.textContent = E('save').coins; } catch (_) {} }
+  function toast(t) { try { E('showToast')(t, '#ffe27a'); } catch (_) {} }
+  function charId() { try { return E('save').cnChar || 'basic'; } catch (_) { return 'basic'; } }
+
+  // ───── 1. 특수능력: 판을 시작할 때마다 능력치(CST)에 더해요 ─────
+  var ABIL = {
+    snow: function (c) { c.wallJ = (c.wallJ || 1) * 1.18; },
+    fire: function (c) { c.run *= 1.15; },
+    wave: function (c) { c.jump *= 1.07; },
+    bamboo: function (c) { c.air = (c.air || 1) + 1; },
+    bolt: function (c) { c.dashV *= 1.22; c.dashT *= 1.15; },
+    sakura: function (c) { c.smart = true; },
+    shadow: function () { try { var p = E('P'); if (p) p.shield = true; } catch (_) {} },
+    gold: function () {}
+  };
+  (function abil() {
+    try {
+      var c = E('CST');
+      if (c && c.run && !c.__cnAb) {
+        c.__cnAb = 1;
+        var f = ABIL[charId()];
+        if (f) f(c);
+        if (charId() === 'shadow') setTimeout(function () { try { var p = E('P'); if (p && !p.dead) { p.shield = true; E('floatText')(p.x + p.w / 2, p.y - 30, '그림자 방패!', '#c9a8ff', 14); } } catch (_) {} }, 600);
+      }
+    } catch (_) {}
+    requestAnimationFrame(abil);
+  })();
+
+  // ───── 2. 떠돌이 상인 ─────
+  var CHANCE = 0.2, merchant = null;
+  function stockOf() {
+    var all = (window.__cnNinjas ? window.__cnNinjas() : []) || [], own = window.__cnOwned ? window.__cnOwned('char') : [];
+    var left = all.filter(function (x) { return x.id !== 'basic' && !x.admin && own.indexOf(x.id) < 0; });
+    for (var i = left.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = left[i]; left[i] = left[j]; left[j] = t; }
+    return left.slice(0, 3);
+  }
+  function spawn() {
+    merchant = null;
+    try {
+      if (E('ENDLESS')) return;
+      var i = E('stageIdx'); if (i < 2 || i % 25 === 24) return;      // 연습 판과 보스 판에는 안 나와요
+      if (Math.random() >= CHANCE) return;
+      if (!stockOf().length) return;                                    // 캐릭터를 다 가졌으면 안 나와요
+      var cps = E('cps'), T = E('T'), W = E('W'), tile = E('tileAt'), solid = function (tx, ty) { var c = tile(tx, ty); return c === '#' || c === '=' || c === 'X'; }, open = function (tx, ty) { var c = tile(tx, ty); return !c || c === '.' || c === ' '; };
+      if (!cps || !cps.length) return;
+      var cp = cps[Math.floor(cps.length / 2)];
+      var fy = cp.y, ty = Math.floor((fy + 2) / T), x = null;
+      [34, -34, 58, -58].some(function (dx) { var mx = cp.x + dx; if (mx < T * 1.5 || mx > W - T * 1.5) return false; if (solid(Math.floor(mx / T), ty) && open(Math.floor(mx / T), ty - 1)) { x = mx; return true; } return false; });
+      if (x == null) return;
+      merchant = { x: x, y: fy, met: false, gone: 0, stock: stockOf() };
+      setTimeout(function () { toast('떠돌이 상인이 이 판 어딘가에 왔어요!'); }, 1400);
+    } catch (_) { merchant = null; }
+  }
+  window.__cnMerchant = function () { return merchant; };
+  window.__cnSpawnMerchant = function (force) { var c = CHANCE; if (force) CHANCE = 1; spawn(); CHANCE = c; return merchant; };
+
+  function toScreen(x, y) { var W = E('W'), vH = E('viewH'), cam = E('cam'), z = 1 + (E('zoomP') || 0); return [(x - W / 2) * z + W / 2, (y - vH * 0.5 - cam) * z + vH * 0.5, z]; }
+  function drawMerchant() {
+    if (!merchant || merchant.gone > 1) return;
+    var c = E('ctx'), b = E('dpr') * E('scale'), tm = E('time'), sp = toScreen(merchant.x, merchant.y), z = sp[2];
+    if (sp[1] < -60 || sp[1] > E('viewH') + 60) return;
+    c.save(); c.setTransform(b, 0, 0, b, 0, 0); c.translate(sp[0], sp[1]); c.scale(z, z);
+    if (merchant.gone) c.globalAlpha = Math.max(0, 1 - merchant.gone);
+    var bob = Math.sin(tm * 3) * 1.5, K = '#141418';
+    c.lineJoin = 'round'; c.lineWidth = 2.2; c.strokeStyle = K;
+    // 그림자
+    c.fillStyle = 'rgba(0,0,0,.25)'; c.beginPath(); c.ellipse(0, 0, 16, 4, 0, 0, 6.283); c.fill();
+    // 등짐
+    c.fillStyle = '#9a6a3a'; c.beginPath(); c.roundRect ? c.roundRect(-20, -34 + bob, 15, 22, 4) : c.rect(-20, -34 + bob, 15, 22); c.fill(); c.stroke();
+    c.strokeStyle = '#6b4424'; c.beginPath(); c.moveTo(-20, -26 + bob); c.lineTo(-5, -26 + bob); c.stroke(); c.strokeStyle = K;
+    // 몸(망토)
+    c.fillStyle = '#5a4a8a'; c.beginPath(); c.moveTo(-11, -2); c.quadraticCurveTo(-12, -26 + bob, 0, -28 + bob); c.quadraticCurveTo(12, -26 + bob, 11, -2); c.closePath(); c.fill(); c.stroke();
+    // 얼굴
+    c.fillStyle = '#f2d2a8'; c.beginPath(); c.arc(0, -33 + bob, 8, 0, 6.283); c.fill(); c.stroke();
+    c.fillStyle = K; c.beginPath(); c.arc(-2.8, -33 + bob, 1.3, 0, 6.283); c.arc(2.8, -33 + bob, 1.3, 0, 6.283); c.fill();
+    c.beginPath(); c.moveTo(-3, -29.5 + bob); c.quadraticCurveTo(0, -27.5 + bob, 3, -29.5 + bob); c.stroke();
+    // 삿갓
+    c.fillStyle = '#e0b860'; c.beginPath(); c.moveTo(-17, -37 + bob); c.lineTo(0, -50 + bob); c.lineTo(17, -37 + bob); c.closePath(); c.fill(); c.stroke();
+    c.strokeStyle = '#a07a30'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(-9, -40.5 + bob); c.lineTo(0, -46 + bob); c.lineTo(9, -40.5 + bob); c.stroke(); c.strokeStyle = K; c.lineWidth = 2.2;
+    // 엽전 주머니
+    c.fillStyle = '#ffd23f'; c.beginPath(); c.arc(8, -12, 4.5, 0, 6.283); c.fill(); c.stroke();
+    // 말풍선
+    if (!merchant.met) {
+      var by = -66 + Math.sin(tm * 4) * 2;
+      c.fillStyle = '#fffaf0'; c.beginPath(); c.roundRect ? c.roundRect(-22, by - 13, 44, 20, 8) : c.rect(-22, by - 13, 44, 20); c.fill(); c.stroke();
+      c.beginPath(); c.moveTo(-4, by + 7); c.lineTo(0, by + 12); c.lineTo(4, by + 7); c.fill(); c.stroke();
+      c.fillStyle = '#2b2b3a'; c.font = '12px Jua, sans-serif'; c.textAlign = 'center'; c.fillText('상인', 0, by + 2);
+    }
+    c.restore();
+  }
+  function touch() {
+    if (!merchant || merchant.met || merchant.gone) return;
+    var p = E('P'); if (!p || p.dead || E('mode') !== 'play') return;
+    var dx = (p.x + p.w / 2) - merchant.x, dy = (p.y + p.h) - merchant.y;
+    if (Math.abs(dx) < 22 && Math.abs(dy) < 30) { merchant.met = true; openShop(); }
+  }
+  function openShop() {
+    try { E("mode = 'paused'"); } catch (_) {}
+    sfx();
+    var stock = merchant.stock.filter(function (x) { return window.__cnOwned('char').indexOf(x.id) < 0; });
+    var o = document.createElement('div'); o.className = 'cnOv';
+    function render(msg) {
+      var coins = E('save').coins || 0;
+      o.innerHTML = '<div class="cnCard"><h3>떠돌이 상인</h3><p style="font-size:14px">"흐흐, 귀한 닌자 옷을 가져왔지. 이번 판에서만 파는 거야!"</p>' +
+        (msg ? '<p style="color:#2f7fd6;font-size:14px">' + msg + '</p>' : '') +
+        '<div style="text-align:left">' + (stock.length ? stock.map(function (x) {
+          var own = window.__cnOwned('char').indexOf(x.id) >= 0, no = coins < x.price;
+          var pv = ''; try { pv = window.__cnPrev ? window.__cnPrev(x.id) : ''; } catch (_) {}
+          return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px dashed #e0d4bb">' +
+            '<div style="width:48px;height:48px;border-radius:12px;background:' + rgb(x.body) + ';border:2px solid #141418;flex:none;display:flex;align-items:center;justify-content:center">' + (pv ? '<img src="' + pv + '" style="max-width:44px;max-height:44px">' : '') + '</div>' +
+            '<div style="flex:1;font-size:14px"><b style="font-size:15.5px">' + x.name + '</b><br><span style="color:#6a6070">' + String(x.d).split(' · ').pop() + '</span></div>' +
+            (own ? '<button class="cnB alt" data-m="eq:' + x.id + '" style="padding:8px 10px;font-size:14px">입기</button>' : '<button class="cnB' + (no ? ' alt' : '') + '" data-m="buy:' + x.id + '" style="padding:8px 10px;font-size:14px"' + (no ? ' disabled' : '') + '><i class="coin sm"></i>' + x.price + '</button>') + '</div>';
+        }).join('') : '<p>오늘은 팔 물건이 없네. 다음에 또 보세!</p>') + '</div>' +
+        '<p style="font-size:13px;color:#8a8270">가진 엽전 <i class="coin sm"></i>' + coins + ' · 상인은 판을 다시 하면 사라져요</p>' +
+        '<div class="cnRow"><button class="cnB" data-m="x">계속 수련하기</button></div></div>';
+    }
+    function rgb(a) { return a ? 'rgb(' + a.join(',') + ')' : '#2c2c33'; }
+    render();
+    document.body.appendChild(o);
+    setTimeout(function () { if (o.isConnected) render(); }, 400);   // 캐릭터 그림이 늦게 그려져도 보이게
+    o.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-m]'); if (!b || b.disabled) return;
+      var a = b.dataset.m;
+      if (a === 'x') { sfx(); o.remove(); merchant.gone = 0.01; try { if (E('mode') === 'paused') E("mode = 'play'"); } catch (_) {} return; }
+      var id = a.split(':')[1], it = stock.filter(function (x) { return x.id === id; })[0], sv = E('save');
+      if (a.indexOf('buy:') === 0) {
+        if (!it || (sv.coins || 0) < it.price) return;
+        sv.coins -= it.price; var own = window.__cnOwned('char'); if (own.indexOf(id) < 0) own.push(id);
+        persist(); try { E('SFX').coin(); } catch (_) {}
+        render(it.name + '을(를) 샀어요! "입기"를 누르면 다음 판부터 능력이 적용돼요.');
+      } else if (a.indexOf('eq:') === 0) {
+        sv.cnChar = id; persist(); sfx();
+        try { if (window.__cnApplyLook) window.__cnApplyLook(); } catch (_) {}
+        render(it.name + ' 옷으로 갈아입었어요! (능력은 다음 판부터)');
+      }
+    });
+  }
+  (function loop() {
+    try {
+      if (merchant && merchant.gone > 0) merchant.gone += 0.04;
+      touch();
+    } catch (_) {}
+    requestAnimationFrame(loop);
+  })();
+  var hook = setInterval(function () {
+    var st, rg; try { st = E('startStage'); rg = E('renderGame'); } catch (_) { return; }
+    if (typeof st !== 'function' || typeof rg !== 'function' || !window.__cnFb) return; clearInterval(hook);
+    window.startStage = function () { var r = st.apply(this, arguments); try { spawn(); } catch (_) {} return r; };
+    window.renderGame = function () { var r = rg.apply(this, arguments); try { drawMerchant(); } catch (_) {} return r; };
+    var cs = E('clearStage');
+    window.clearStage = function () {   // 황금 닌자: 판에서 주운 엽전 1.5배
+      try { if (charId() === 'gold' && !E('ENDLESS')) { var g = E('gotCoins') || 0, add = Math.ceil(g * 0.5); if (add > 0) E('bonusCoins += ' + add); } } catch (_) {}
+      return cs.apply(this, arguments);
+    };
+  }, 300);
 })();
