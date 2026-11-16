@@ -3346,7 +3346,7 @@
       p.ammo -= 1; p.starCD = 0.16;
       E('shuris').push({ x: p.x + p.w / 2 + p.face * 8, y: p.y + 9, vx: p.face * 560 + p.vx * 0.3, rot: 0, life: 0.9, stuck: 0 });
       try { E('SFX').throw(); } catch (_) {}
-      p.throwT = 0.36; p.slashT = 0; p.ss = 0.94;   // 새 던지기 애니메이션 (6장)
+      p.throwT = 0.36; p.__thrT = 0.72; p.slashT = 0; p.ss = 0.94;   // 새 던지기 애니메이션 (6장)
     } catch (_) {}
   }
   window.__cnThrow = throwStar;
@@ -3463,56 +3463,144 @@
     };
   }, 300);
 
-  // ───── 3. 친구 ─────
-  function friends() { var sv = E('save'); sv.cnFriends = sv.cnFriends || []; return sv.cnFriends; }
+  // ───── 3. 친구 (요청을 보내고, 상대가 받아야 친구가 돼요) ─────
   function myNick() { try { var sv = E('save'); if (sv && sv.nick) return sv.nick; var r = E('SRV'); if (r && r.nick) return r.nick; } catch (_) {} return ''; }
+  // 내가 보낸 요청(=친구 목록 후보)과 거절한 요청을 저장해 둬요. 친구 = 서로 요청한 사이
+  function frq() {
+    var sv = E('save'); sv.cnFrq = sv.cnFrq || {};
+    if (sv.cnFriends && sv.cnFriends.length) { sv.cnFriends.forEach(function (id) { if (!sv.cnFrq[id]) sv.cnFrq[id] = Date.now(); }); sv.cnFriends = []; }
+    return sv.cnFrq;
+  }
+  function frDecl() { var sv = E('save'); sv.cnFrDecl = sv.cnFrDecl || {}; return sv.cnFrDecl; }
+  function syncFrq(x, uid) { var m = frq(); if (!Object.keys(m).length) return Promise.resolve(); return x.F.setDoc(x.F.doc(x.db, 'ranks', uid), { frq: m }, { merge: true }).catch(function () {}); }
+  function unFrq(x, uid, id) { var up = {}; up['frq.' + id] = x.F.deleteField(); return x.F.updateDoc(x.F.doc(x.db, 'ranks', uid), up).catch(function () {}); }
+  // 나에게 온 요청들 (내가 아직 안 받은 것)
+  function incoming(x, uid) {
+    return x.F.getDocs(x.F.query(x.F.collection(x.db, 'ranks'), x.F.where('frq.' + uid, '>', 0))).then(function (snap) {
+      var mine = frq(), dec = frDecl();
+      return snap.docs.filter(function (d) { var v = d.data(); return d.id !== uid && v.frq && v.frq[uid] && !mine[d.id] && !dec[d.id]; })
+        .map(function (d) { var v = d.data(); return { id: d.id, n: v.nick || '닌자', t: Number(v.tower) || 0, at: Number(v.frq[uid]) || 0 }; });
+    });
+  }
+  function accept(x, uid, id) { var m = frq(); m[id] = Date.now(); delete frDecl()[id]; persist(); return syncFrq(x, uid); }
+  function decline(id) { frDecl()[id] = Date.now(); persist(); }
+  function setDot(n) { var d = document.getElementById('frDot'); if (d) d.classList.toggle('hide', !n); }
+
   function openFriends(msg) {
-    var o = overlay('<h3>' + I('star') + ' 친구</h3><p style="font-size:13.5px">친구의 <b>닉네임</b>으로 찾아서 추가해요. 내 닉네임: <b>' + h(myNick() || '로그인 필요') + '</b></p>' +
+    var o = overlay('<h3>' + I('star') + ' 친구</h3><p style="font-size:13.5px">닉네임으로 찾아서 <b>친구 요청</b>을 보내요. 상대가 받으면 친구가 돼요.<br>내 닉네임: <b>' + h(myNick() || '로그인 필요') + '</b></p>' +
       '<div style="display:flex;gap:6px"><input class="cnIn" id="cnFrQ" maxlength="12" placeholder="친구 닉네임"><button class="cnB blue" id="cnFrGo" style="flex:none;padding:8px 14px">찾기</button></div>' +
       '<div id="cnFrRes" style="min-height:4px;margin:6px 0">' + (msg ? '<p style="font-size:14px;color:#2f7fd6">' + h(msg) + '</p>' : '') + '</div>' +
+      '<div id="cnFrIn"></div>' +
       '<div style="font-size:13px;color:#8a8270;text-align:left;margin-top:6px">친구 랭킹 (무한의 탑 · 이번 주 시즌)</div><div id="cnFrList"><div class="cnFr"><span class="n">불러오는 중…</span></div></div>' +
+      '<div id="cnFrOut"></div>' +
       '<div class="cnRow"><button class="cnB alt" data-fr="x">닫기</button></div>');
     var q = o.querySelector('#cnFrQ'), res = o.querySelector('#cnFrRes');
+    var X = null, ME = null, mutual = {}, inc = {};
+    function reopen(m) { o.remove(); openFriends(m); }
     function search() {
       var nk = q.value.trim(); if (!nk) return;
       res.innerHTML = '<p style="font-size:14px">찾는 중…</p>';
       fbx().then(function (x) {
         var me = x.auth.currentUser; if (!me) throw 'guest';
         return x.F.getDocs(x.F.query(x.F.collection(x.db, 'ranks'), x.F.where('nick', '==', nk))).then(function (snap) {
-          var rows = snap.docs.filter(function (d) { return d.id !== me.uid; });
+          var rows = snap.docs.filter(function (d) { return d.id !== me.uid && d.data().nick === nk; });
           if (!rows.length) { res.innerHTML = '<p style="font-size:14px">그 닉네임을 가진 닌자를 못 찾았어요</p>'; return; }
-          res.innerHTML = rows.slice(0, 5).map(function (d) { var v = d.data(), on = friends().indexOf(d.id) >= 0; return '<div class="cnFr"><span class="n"><b>' + h(v.nick) + '</b> <small>탑 ' + (Number(v.tower) || 0) + 'm</small></span>' + (on ? '<small>이미 친구</small>' : '<button data-add="' + h(d.id) + '">추가</button>') + '</div>'; }).join('');
+          var mine = frq();
+          res.innerHTML = rows.slice(0, 5).map(function (d) {
+            var v = d.data(), theyAsked = v.frq && v.frq[me.uid], btn;
+            if (mine[d.id] && theyAsked) btn = '<small>이미 친구</small>';
+            else if (mine[d.id]) btn = '<small>요청 보냄</small>';
+            else if (theyAsked) btn = '<button data-acc="' + h(d.id) + '">수락</button>';
+            else btn = '<button data-add="' + h(d.id) + '">친구 요청</button>';
+            return '<div class="cnFr"><span class="n"><b>' + h(v.nick) + '</b> <small>탑 ' + (Number(v.tower) || 0) + 'm</small></span>' + btn + '</div>';
+          }).join('');
         });
       }).catch(function (er) { res.innerHTML = '<p style="font-size:14px">' + (er === 'guest' ? '로그인해야 친구를 찾을 수 있어요' : '찾지 못했어요. 잠시 뒤 다시 해 주세요') + '</p>'; });
     }
     o.querySelector('#cnFrGo').addEventListener('click', function () { sfx(); search(); });
     q.addEventListener('keydown', function (e) { e.stopPropagation(); if (e.key === 'Enter') search(); });
     o.addEventListener('click', function (e) {
-      var a = e.target.closest('[data-add]'); if (a) { sfx(); var F = friends(); if (F.indexOf(a.dataset.add) < 0 && F.length < 50) F.push(a.dataset.add); persist(); o.remove(); openFriends('친구로 추가했어요!'); return; }
-      var r = e.target.closest('[data-del]'); if (r) { sfx(); var G = friends(), k = G.indexOf(r.dataset.del); if (k >= 0) G.splice(k, 1); persist(); o.remove(); openFriends('친구에서 뺐어요'); return; }
+      var a = e.target.closest('[data-add]');
+      if (a) { sfx(); var id = a.dataset.add; fbx().then(function (x) { var me = x.auth.currentUser; if (!me) throw 'guest'; var m = frq(); if (Object.keys(m).length >= 50) throw 'full'; m[id] = Date.now(); delete frDecl()[id]; persist(); return syncFrq(x, me.uid); }).then(function () { reopen('친구 요청을 보냈어요! 상대가 받으면 친구가 돼요'); }, function (er) { reopen(er === 'full' ? '친구는 50명까지예요' : '요청을 못 보냈어요. 잠시 뒤 다시 해 주세요'); }); return; }
+      var c = e.target.closest('[data-acc]');
+      if (c) { sfx(); var cid = c.dataset.acc; fbx().then(function (x) { var me = x.auth.currentUser; if (!me) throw 'guest'; return accept(x, me.uid, cid); }).then(function () { reopen('친구가 됐어요!'); }, function () { reopen('잠시 뒤 다시 해 주세요'); }); return; }
+      var dn = e.target.closest('[data-no]');
+      if (dn) { sfx(); decline(dn.dataset.no); reopen('요청을 거절했어요'); return; }
+      var r = e.target.closest('[data-del]');
+      if (r) { sfx(); var rid = r.dataset.del, was = mutual[rid]; delete frq()[rid]; if (was) frDecl()[rid] = Date.now(); persist(); fbx().then(function (x) { var me = x.auth.currentUser; if (me) return unFrq(x, me.uid, rid); }).then(function () { reopen(was ? '친구에서 뺐어요' : '요청을 취소했어요'); }); return; }
       if (e.target.closest('[data-fr]')) { sfx(); o.remove(); }
     });
-    // 친구 랭킹
     fbx().then(function (x) {
-      var me = x.auth.currentUser; var ids = friends().slice(); if (me) ids.push(me.uid);
-      if (!ids.length) throw 'none';
-      return Promise.all(ids.map(function (id) { return x.F.getDoc(x.F.doc(x.db, 'ranks', id)).then(function (d) { return d.exists() ? { id: id, v: d.data() } : null; }, function () { return null; }); })).then(function (list) {
+      var me = x.auth.currentUser; if (!me) throw 'guest';
+      X = x; ME = me.uid; syncFrq(x, me.uid);
+      // 받은 요청
+      incoming(x, me.uid).then(function (list) {
+        setDot(list.length);
+        var el = document.getElementById('cnFrIn'); if (!el || !list.length) return;
+        el.innerHTML = '<div style="font-size:13px;color:#e0582f;text-align:left;margin-top:6px"><b>받은 친구 요청 ' + list.length + '개</b></div>' + list.map(function (r) {
+          return '<div class="cnFr" style="background:#fff4e0;border-radius:8px"><span class="n"><b>' + h(r.n) + '</b> <small>탑 ' + r.t + 'm</small></span><button data-acc="' + h(r.id) + '" style="background:#ffe27a">수락</button><button data-no="' + h(r.id) + '">거절</button></div>';
+        }).join('');
+      }).catch(function () {});
+      var ids = Object.keys(frq());
+      return Promise.all(ids.concat([me.uid]).map(function (id) { return x.F.getDoc(x.F.doc(x.db, 'ranks', id)).then(function (d) { return d.exists() ? { id: id, v: d.data() } : null; }, function () { return null; }); })).then(function (list) {
         var wk = (function () { var d = new Date(Date.now() + 9 * 3600e3); d.setUTCHours(0, 0, 0, 0); d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7); return d.toISOString().slice(0, 10); })();
-        var rows = list.filter(Boolean).map(function (r) { return { id: r.id, n: r.v.nick || '닌자', t: Number(r.v.tower) || 0, w: r.v.wk === wk ? Number(r.v.wp) || 0 : 0, me: me && r.id === me.uid }; }).sort(function (a, b) { return b.t - a.t || b.w - a.w; });
+        var rows = [], pend = [];
+        list.filter(Boolean).forEach(function (r) {
+          var isMe = r.id === me.uid, ok = isMe || (r.v.frq && r.v.frq[me.uid]);
+          var row = { id: r.id, n: r.v.nick || '닌자', t: Number(r.v.tower) || 0, w: r.v.wk === wk ? Number(r.v.wp) || 0 : 0, me: isMe };
+          if (ok) { rows.push(row); if (!isMe) mutual[r.id] = 1; } else pend.push(row);
+        });
+        rows.sort(function (a, b) { return b.t - a.t || b.w - a.w; });
         var el = document.getElementById('cnFrList'); if (!el) return;
-        el.innerHTML = rows.length > (me ? 1 : 0) ? rows.map(function (r, i) { return '<div class="cnFr"' + (r.me ? ' style="background:#fff1b8;border-radius:8px"' : '') + '><span class="n">' + (i < 3 ? I('medal' + (i + 1)) : (i + 1) + '.') + ' <b>' + h(r.n) + '</b>' + (r.me ? ' <small>(나)</small>' : '') + '<br><small>탑 ' + r.t + 'm · 이번 주 ' + r.w + '점</small></span>' + (r.me ? '' : '<button data-del="' + h(r.id) + '">빼기</button>') + '</div>'; }).join('') : '<div class="cnFr"><span class="n">아직 친구가 없어요. 닉네임으로 찾아서 추가해 보세요!</span></div>';
+        el.innerHTML = rows.length > 1 ? rows.map(function (r, i) { return '<div class="cnFr"' + (r.me ? ' style="background:#fff1b8;border-radius:8px"' : '') + '><span class="n">' + (i < 3 ? I('medal' + (i + 1)) : (i + 1) + '.') + ' <b>' + h(r.n) + '</b>' + (r.me ? ' <small>(나)</small>' : '') + '<br><small>탑 ' + r.t + 'm · 이번 주 ' + r.w + '점</small></span>' + (r.me ? '' : '<button data-del="' + h(r.id) + '">빼기</button>') + '</div>'; }).join('') : '<div class="cnFr"><span class="n">아직 친구가 없어요. 닉네임으로 찾아서 요청을 보내 보세요!</span></div>';
+        var eo = document.getElementById('cnFrOut');
+        if (eo && pend.length) eo.innerHTML = '<div style="font-size:13px;color:#8a8270;text-align:left;margin-top:8px">보낸 요청 (상대가 받으면 친구가 돼요)</div>' + pend.map(function (r) { return '<div class="cnFr"><span class="n"><b>' + h(r.n) + '</b> <small>기다리는 중</small></span><button data-del="' + h(r.id) + '">취소</button></div>'; }).join('');
       });
-    }).catch(function (er) { var el = document.getElementById('cnFrList'); if (el) el.innerHTML = '<div class="cnFr"><span class="n">' + (er === 'none' ? '아직 친구가 없어요. 닉네임으로 찾아서 추가해 보세요!' : '로그인하면 친구 랭킹을 볼 수 있어요') + '</span></div>'; });
+    }).catch(function (er) { var el = document.getElementById('cnFrList'); if (el) el.innerHTML = '<div class="cnFr"><span class="n">' + (er === 'guest' ? '로그인하면 친구를 맺을 수 있어요' : '친구 목록을 못 불러왔어요. 잠시 뒤 다시 해 주세요') + '</span></div>'; });
     setTimeout(function () { try { q.focus(); } catch (_) {} }, 50);
   }
   window.__openFriends = openFriends;
+
+  // ───── 친구 요청이 오면 상대에게 메시지로 알려줘요 ─────
+  var frCss = document.createElement('style');
+  frCss.textContent = '#cnFrMsg{position:fixed;left:50%;top:max(12px,env(safe-area-inset-top));transform:translateX(-50%);z-index:60;width:min(92vw,360px);background:#fffaf0;border:3px solid #141418;border-radius:16px;box-shadow:0 5px 0 #141418;padding:10px 12px;font-size:14.5px;text-align:center;animation:cnFrIn .3s ease-out}' +
+    '#cnFrMsg .r{display:flex;gap:6px;margin-top:8px}#cnFrMsg button{flex:1;border:2px solid #141418;border-radius:10px;font:inherit;font-size:14px;padding:6px;background:#fff;cursor:pointer}#cnFrMsg button.y{background:#ffe27a}' +
+    '@keyframes cnFrIn{from{transform:translate(-50%,-30px);opacity:0}to{transform:translate(-50%,0);opacity:1}}';
+  document.head.appendChild(frCss);
+  var shown = {}; try { shown = JSON.parse(localStorage.getItem('cn_fr_seen') || '{}') || {}; } catch (_) {}
+  function showMsg(r) {
+    if (document.getElementById('cnFrMsg')) return;
+    var m = document.createElement('div'); m.id = 'cnFrMsg';
+    m.innerHTML = I('star') + ' <b>' + h(r.n) + '</b>님이 친구 요청을 보냈어요!<div class="r"><button class="y" data-m="y">수락</button><button data-m="n">거절</button><button data-m="l">나중에</button></div>';
+    m.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-m]'); if (!b) return; sfx(); m.remove();
+      if (b.dataset.m === 'y') fbx().then(function (x) { var me = x.auth.currentUser; if (me) return accept(x, me.uid, r.id); }).then(function () { toast(r.n + '님과 친구가 됐어요!'); check(); });
+      else if (b.dataset.m === 'n') { decline(r.id); check(); }
+    });
+    document.body.appendChild(m);
+    setTimeout(function () { if (m.parentNode) m.remove(); }, 15000);
+    try { sfx('coin'); } catch (_) {}
+  }
+  function check() {
+    fbx().then(function (x) {
+      var me = x.auth.currentUser; if (!me) return;
+      return incoming(x, me.uid).then(function (list) {
+        setDot(list.length);
+        var mode = ''; try { mode = E('mode'); } catch (_) {}
+        if (mode === 'play') return;   // 게임하는 중엔 방해하지 않아요
+        var fresh = list.filter(function (r) { return shown[r.id] !== r.at; });
+        if (fresh.length) { shown[fresh[0].id] = fresh[0].at; try { localStorage.setItem('cn_fr_seen', JSON.stringify(shown)); } catch (_) {} showMsg(fresh[0]); }
+      });
+    }).catch(function () {});
+  }
+  setTimeout(check, 7000); setInterval(check, 45000);
 
   // ───── 로비 메뉴에 도감 · 친구 버튼 ─────
   var hookL = setInterval(function () {
     var rows = document.querySelectorAll('#cnMenu .cnMrow'); if (rows.length < 2) return; clearInterval(hookL);
     var row3 = document.createElement('div'); row3.className = 'cnMrow';
     [['btnDex', 'scroll', '도감', function () { openDex(); }], ['btnFriends', 'star', '친구', function () { openFriends(); }]].forEach(function (d) {
-      var b = document.createElement('button'); b.className = 'mid'; b.id = d[0]; b.innerHTML = '<span class="lbl">' + I(d[1]) + d[2] + '</span>';
+      var b = document.createElement('button'); b.className = 'mid'; b.id = d[0]; b.innerHTML = '<span class="lbl">' + I(d[1]) + d[2] + '</span>' + (d[0] === 'btnFriends' ? '<b class="dot hide" id="frDot"></b>' : '');
       b.addEventListener('click', function () { sfx(); d[3](); });
       rows[1].appendChild(b);
     });
@@ -3532,4 +3620,17 @@
     };
     im.src = src;
   });
+})();
+
+// ── 표창 던지기 그림을 GIF 속도(한 장에 0.12초)로 보여줘요 ──
+(function () {
+  var E = function (s) { return (0, eval)(s); }, last = 0;
+  function tick(now) {
+    try {
+      var p = E('P'), dt = last ? Math.min(0.05, (now - last) / 1000) : 0;
+      if (p && p.__thrT > 0) { p.__thrT -= dt; p.throwT = p.__thrT > 0 ? Math.max(0.001, p.__thrT / 2) : 0; }
+    } catch (_) {}
+    last = now; requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
 })();
