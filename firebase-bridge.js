@@ -1338,11 +1338,11 @@
 (function () {
   var E = function (s) { return (0, eval)(s); };
   var TIERS = window.__STATUE_TIERS = [
-    { name: '돌', price: 1000, d: '단단한 회색 돌로 만든 동상', base: [150, 146, 138], hi: [210, 206, 198], ped: ['#b9b4aa', '#7d776d'] },
-    { name: '금', price: 2000, d: '번쩍번쩍 황금 동상', base: [200, 140, 20], hi: [255, 228, 110], ped: ['#ffe27a', '#b8860b'] },
-    { name: '다이아', price: 3000, d: '반짝이는 하늘빛 다이아 동상', base: [110, 190, 235], hi: [235, 250, 255], ped: ['#d8f4ff', '#6fb6d8'] },
-    { name: '에메랄드', price: 4000, d: '깊은 초록빛 에메랄드 동상', base: [20, 140, 80], hi: [140, 240, 170], ped: ['#8fe8b0', '#1f7a4a'] },
-    { name: '루비', price: 5000, d: '타오르는 붉은 루비 동상 (최고 등급)', base: [160, 20, 45], hi: [255, 120, 140], ped: ['#ff9aaa', '#8a1a2e'] }
+    { name: '돌', price: 2000, d: '단단한 회색 돌로 만든 동상', base: [150, 146, 138], hi: [210, 206, 198], ped: ['#b9b4aa', '#7d776d'] },
+    { name: '금', price: 4000, d: '번쩍번쩍 황금 동상', base: [200, 140, 20], hi: [255, 228, 110], ped: ['#ffe27a', '#b8860b'] },
+    { name: '다이아', price: 7000, d: '반짝이는 하늘빛 다이아 동상', base: [110, 190, 235], hi: [235, 250, 255], ped: ['#d8f4ff', '#6fb6d8'] },
+    { name: '에메랄드', price: 10000, d: '깊은 초록빛 에메랄드 동상', base: [20, 140, 80], hi: [140, 240, 170], ped: ['#8fe8b0', '#1f7a4a'] },
+    { name: '루비', price: 15000, d: '타오르는 붉은 루비 동상 (최고 등급)', base: [160, 20, 45], hi: [255, 120, 140], ped: ['#ff9aaa', '#8a1a2e'] }
   ];
   function tierOf(n) { return TIERS[Math.max(1, Math.min(TIERS.length, n || 1)) - 1]; }
   var cache = {}, cacheAt = {};
@@ -1601,7 +1601,7 @@
     if (ov) return;
     var wrap = document.getElementById('wrap') || document.body;
     ov = document.createElement('div'); ov.id = 'bzOv';
-    ov.innerHTML = '<div class="bzTop"><div class="bzPill">번 엽전 <b id="bzEarn">0</b></div><div class="bzPill">처치 <b id="bzKill">0</b></div><div class="bzPill">지갑 <b id="bzWallet">0</b></div><button class="bzX">✕</button></div>' +
+    ov.innerHTML = '<div class="bzTop"><div class="bzPill">번 엽전 <b id="bzEarn">0</b></div><div class="bzPill">처치 <b id="bzKill">0</b></div><div class="bzPill">지갑 <b id="bzWallet">0</b></div><button class="bzX">' + window.__cnI('x') + '</button></div>' +
       '<div class="bzRage"><i></i><span></span></div><canvas id="bzCv"></canvas><div class="bzNote">켜 두기만 하면 알아서 싸워요 · 몬스터 10마리마다 엽전 1개 · 분노가 차면 광폭화 · 50마리마다 보스</div>';
     wrap.appendChild(ov);
     cv = ov.querySelector('#bzCv'); c = cv.getContext('2d');
@@ -1625,7 +1625,7 @@
     var box = document.querySelector('.lobbyBtns'); if (!box) return; clearInterval(wait);
     var stl = document.createElement('style'); stl.textContent = css + '#btnBz{width:100%;background:linear-gradient(180deg,#ff6b5a,#c8323e)!important;color:#fff}'; document.head.appendChild(stl);
     var row = document.createElement('div'); row.className = 'row';
-    row.innerHTML = '<button class="mid" id="btnBz"><span class="lbl">⚔️ 광전사 사냥터 (자동 사냥)</span></button>';
+    row.innerHTML = '<button class="mid" id="btnBz"><span class="lbl">광전사 사냥터 (자동 사냥)</span></button>';
     box.appendChild(row);
     row.querySelector('#btnBz').addEventListener('click', function () { try { E('SFX').click(); } catch (_) {} open(); });
   }, 300);
@@ -2125,7 +2125,7 @@
     for (var i = pg * per; i < Math.min(S.length, (pg + 1) * per); i++) {
       var s = S[i], locked = i + 1 > save.unlocked, b = save.best['s' + i];
       var RK = b && (RANKS[b.rank] || RANKS[RANKS.length - 1] || { c: '#7b8494', n: '-' });   // 기록이 이상해도 목록이 멈추지 않게
-      var right = locked ? ic('lock') : b ? '<b style="color:' + (RK.c === '#7b8494' ? '#fff' : '#fff3a0') + '">' + RK.n + '</b>' + fmtTime(b.time || 0) + ' · 📜' + (b.scrolls || 0) + '/3' : '<b>NEW</b>도전!';
+      var right = locked ? ic('lock') : b ? '<b style="color:' + (RK.c === '#7b8494' ? '#fff' : '#fff3a0') + '">' + RK.n + '</b>' + fmtTime(b.time || 0) + ' · ' + window.__cnI('scroll') + (b.scrolls || 0) + '/3' : '<b>NEW</b>도전!';
       html += '<div class="st' + (locked ? ' locked' : '') + '" data-i="' + i + '" style="background:' + BG[s.theme] + '"><div class="no">' + (i + 1) + '</div><div><div class="nm">' + s.name + '</div><div class="sb">' + s.sub + '</div></div><div class="rk">' + right + '</div></div>';
     }
     E('openSheet')(ic('scroll') + '스테이지', html);
@@ -2228,7 +2228,7 @@
     if (!el) { el = document.createElement('div'); el.id = 'bossLives'; el.style.cssText = 'position:absolute;left:50%;top:calc(130px + env(safe-area-inset-top));transform:translateX(-50%);z-index:4;pointer-events:none;font:bold 14px sans-serif;color:#fff;background:rgba(10,12,24,.55);padding:4px 12px;border-radius:14px;white-space:nowrap;display:none'; (document.getElementById('wrap') || document.body).appendChild(el); }
     var on = fight() && E('mode') === 'play';
     el.style.display = on ? 'block' : 'none';
-    if (on) { var h = ''; for (var i = 0; i < MAX; i++) h += i < lives ? '❤️' : '🖤'; el.innerHTML = '목숨 ' + h; }
+    if (on) { var h = ''; for (var i = 0; i < MAX; i++) h += window.__cnI(i < lives ? 'heart' : 'heartOff'); el.innerHTML = '목숨 ' + h; }
   }
   function gameOver() {
     try {
@@ -2333,7 +2333,8 @@
     if (m === 'timer' && E('mode') === 'play') {
       var tl = Math.max(0, timeLeft), red = tl < 10;
       c.fillStyle = red ? 'rgba(200,30,40,.75)' : 'rgba(0,0,0,.5)'; c.fillRect(W / 2 - 46, 92, 92, 24);
-      c.fillStyle = '#fff'; c.font = 'bold 15px sans-serif'; c.textAlign = 'center'; c.fillText('⏱ ' + Math.ceil(tl) + '초', W / 2, 109);
+      c.strokeStyle = '#fff'; c.lineWidth = 2; c.beginPath(); c.arc(W / 2 - 28, 104, 6.5, 0, 6.283); c.stroke(); c.beginPath(); c.moveTo(W / 2 - 28, 104); c.lineTo(W / 2 - 28, 99.5); c.moveTo(W / 2 - 28, 104); c.lineTo(W / 2 - 24.5, 106); c.stroke();
+      c.fillStyle = '#fff'; c.font = 'bold 15px sans-serif'; c.textAlign = 'center'; c.fillText(Math.ceil(tl) + '초', W / 2 + 8, 109);
     }
     c.restore();
   }
@@ -2486,7 +2487,7 @@
           var card = document.getElementById('mcard'); if (!card || card.querySelector('.chest')) return;
           var bt = document.createElement('button'); bt.className = 'go chest';
           bt.style.cssText = 'background:linear-gradient(#ffd75a,#e8a317);color:#3a2400;margin-top:8px;animation:chestWob .6s ease-in-out infinite alternate';
-          bt.innerHTML = '🎁 보물 상자 발견! 눌러서 열기';
+          bt.innerHTML = window.__cnI('gift') + ' 보물 상자 발견! 눌러서 열기';
           if (!document.getElementById('chestCss')) { var st2 = document.createElement('style'); st2.id = 'chestCss'; st2.textContent = '@keyframes chestWob{from{transform:rotate(-2deg) scale(1)}to{transform:rotate(2deg) scale(1.04)}}'; document.head.appendChild(st2); }
           bt.onclick = function (ev) {
             ev.stopPropagation(); bt.onclick = null; bt.style.animation = 'none';
@@ -2495,7 +2496,7 @@
             var sv = E('save'); sv.coins += n; E('persist')();
             try { var w = document.getElementById('wallet'); if (w) w.textContent = sv.coins; } catch (_) {}
             try { E('SFX').coin && E('SFX').coin(); } catch (_) {}
-            bt.innerHTML = (n >= 60 ? '🎉 대박! ' : '✨ ') + '엽전 +' + n;
+            bt.innerHTML = (n >= 60 ? window.__cnI('party') + ' 대박! ' : window.__cnI('spark') + ' ') + '엽전 +' + n;
           };
           var earn = card.querySelector('.earn'); earn ? earn.after(bt) : card.appendChild(bt);
         }, 1800);
@@ -2541,18 +2542,18 @@
 
   // ───── 1. 조작 연습 (처음 수련할 때 한 번, 설정에서 다시 보기) ─────
   var TUT = [
-    ['🏃', '이동', PC ? '← → 방향키로 움직여요.' : '왼쪽 아래 ◀ ▶ 버튼으로 움직여요.'],
-    ['⤴️', '점프 · 2단 점프', (PC ? 'Space' : '초록 점프 버튼') + '으로 점프! 공중에서 한 번 더 누르면 2단 점프예요.'],
-    ['🧱', '벽 타기', '벽에 붙으면 천천히 미끄러져요. 그때 점프하면 반대쪽으로 벽 점프!'],
-    ['💨', '대시', (PC ? 'Q 키' : '파란 대시 버튼') + '로 앞으로 휙! 대시하는 동안은 몬스터에 닿아도 괜찮아요.'],
-    ['🗡️', '베기 · 보스 잡기', (PC ? 'E 키' : '빨간 베기 버튼') + '로 몬스터를 베요. 보스는 머리를 밟거나 대시로 부딪혀서 때려요.'],
-    ['🚩', '목표', '엽전과 두루마리 3개를 모으면서 맨 위 깃발까지 올라가요. 떨어지면 마지막 등불에서 다시 시작해요!']
+    ['run', '이동', PC ? '← → 방향키로 움직여요.' : '왼쪽 아래 ◀ ▶ 버튼으로 움직여요.'],
+    ['jump', '점프 · 2단 점프', (PC ? 'Space' : '초록 점프 버튼') + '으로 점프! 공중에서 한 번 더 누르면 2단 점프예요.'],
+    ['wall', '벽 타기', '벽에 붙으면 천천히 미끄러져요. 그때 점프하면 반대쪽으로 벽 점프!'],
+    ['dash', '대시', (PC ? 'Q 키' : '파란 대시 버튼') + '로 앞으로 휙! 대시하는 동안은 몬스터에 닿아도 괜찮아요.'],
+    ['slash', '베기 · 보스 잡기', (PC ? 'E 키' : '빨간 베기 버튼') + '로 몬스터를 베요. 보스는 머리를 밟거나 대시로 부딪혀서 때려요.'],
+    ['flag', '목표', '엽전과 두루마리 3개를 모으면서 맨 위 깃발까지 올라가요. 떨어지면 마지막 등불에서 다시 시작해요!']
   ];
   function showTutorial(done) {
     var i = 0, o = overlay('');
     function draw() {
       var t = TUT[i], last = i === TUT.length - 1;
-      o.firstChild.innerHTML = '<div style="font-size:13px;color:#8a8270">조작 연습 ' + (i + 1) + ' / ' + TUT.length + '</div><div class="cnBig">' + t[0] + '</div><h3>' + t[1] + '</h3><p>' + t[2] + '</p>' +
+      o.firstChild.innerHTML = '<div style="font-size:13px;color:#8a8270">조작 연습 ' + (i + 1) + ' / ' + TUT.length + '</div><div class="cnBig">' + window.__cnI(t[0]) + '</div><h3>' + t[1] + '</h3><p>' + t[2] + '</p>' +
         '<div class="cnDots">' + TUT.map(function (_, k) { return '<i class="' + (k === i ? 'on' : '') + '"></i>'; }).join('') + '</div>' +
         '<div class="cnRow">' + (i ? '<button class="cnB alt" data-t="prev">이전</button>' : '<button class="cnB alt" data-t="skip">건너뛰기</button>') + '<button class="cnB' + (last ? '' : ' blue') + '" data-t="next">' + (last ? '수련 시작!' : '다음') + '</button></div>';
     }
@@ -2626,7 +2627,8 @@
       if (t > 11) {
         var a2 = Math.min(1, (t - 11) * 1.5); c.globalAlpha = a2;
         c.font = 'bold ' + Math.min(30, W / 12) + 'px Jua, sans-serif'; c.lineWidth = 6; c.strokeStyle = '#141418';
-        c.strokeText('👑 전설의 닌자 👑', W / 2, H * 0.17); c.fillStyle = '#ffd23f'; c.fillText('👑 전설의 닌자 👑', W / 2, H * 0.17);
+        c.strokeText('전설의 닌자', W / 2, H * 0.17); c.fillStyle = '#ffd23f'; c.fillText('전설의 닌자', W / 2, H * 0.17);
+        var tw2 = c.measureText('전설의 닌자').width; [-1, 1].forEach(function (sd) { var cx2 = W / 2 + sd * (tw2 / 2 + 22), cy3 = H * 0.17 - 8; c.beginPath(); c.moveTo(cx2 - 12, cy3 + 8); c.lineTo(cx2 - 12, cy3 - 6); c.lineTo(cx2 - 6, cy3); c.lineTo(cx2, cy3 - 10); c.lineTo(cx2 + 6, cy3); c.lineTo(cx2 + 12, cy3 - 6); c.lineTo(cx2 + 12, cy3 + 8); c.closePath(); c.fillStyle = '#ffd23f'; c.lineWidth = 3; c.strokeStyle = '#141418'; c.fill(); c.stroke(); });
         c.font = Math.min(18, W / 20) + 'px Jua, sans-serif'; c.lineWidth = 4;
         var sub = first ? '칭호 [전설의 닌자] · 엽전 +500 획득!' : '플레이해 줘서 고마워요!';
         c.strokeText(sub, W / 2, H * 0.17 + 34); c.fillStyle = '#fff'; c.fillText(sub, W / 2, H * 0.17 + 34);
@@ -2642,7 +2644,7 @@
 
   // ───── 3. 버그 신고 ─────
   function openReport() {
-    var o = overlay('<div class="cnBig" style="font-size:40px">🐞</div><h3>버그 신고 · 의견 보내기</h3><p>어디서 어떤 일이 있었는지 적어 주세요. 관리자에게 바로 전달돼요.</p>' +
+    var o = overlay('<div class="cnBig">' + window.__cnI('bug') + '</div><h3>버그 신고 · 의견 보내기</h3><p>어디서 어떤 일이 있었는지 적어 주세요. 관리자에게 바로 전달돼요.</p>' +
       '<textarea class="cnTa" maxlength="500" placeholder="예) 37스테이지 오른쪽 벽에 끼었어요"></textarea><p class="cnMsg" style="min-height:20px;font-size:14px"></p>' +
       '<div class="cnRow"><button class="cnB alt" data-r="x">닫기</button><button class="cnB blue" data-r="send">보내기</button></div>');
     var ta = o.querySelector('textarea'), msg = o.querySelector('.cnMsg');
@@ -2656,7 +2658,7 @@
         var ts = String(Date.now()), st = 0; try { st = E('stageIdx') + 1; } catch (_) {}
         var rep = {}; rep[ts] = { t: text.slice(0, 500), s: st, ua: navigator.userAgent.slice(0, 140) };
         return x.F.setDoc(x.F.doc(x.db, 'users', u.uid), { reports: rep }, { merge: true });
-      }).then(function () { msg.textContent = '보냈어요! 고마워요 🙏'; ta.value = ''; setTimeout(function () { o.remove(); }, 1200); })
+      }).then(function () { msg.textContent = '보냈어요! 고마워요'; ta.value = ''; setTimeout(function () { o.remove(); }, 1200); })
         .catch(function (er) { b.disabled = false; msg.textContent = er === 'guest' ? '로그인해야 보낼 수 있어요' : '보내지 못했어요. 잠시 뒤 다시 해 주세요'; });
     });
   }
@@ -2671,7 +2673,7 @@
   function fmt(t) { return (Math.round(t * 10) / 10).toFixed(1) + '초'; }
   function openDaily() {
     var d = today(), idx = dailyIdx(d), S = E('STAGES')[idx], sv = E('save'), mine = sv.cnDailyBest && sv.cnDailyBest.d === d ? sv.cnDailyBest.t : null;
-    var o = overlay('<div style="font-size:13px;color:#8a8270">' + d + '</div><h3>📅 오늘의 도전</h3>' +
+    var o = overlay('<div style="font-size:13px;color:#8a8270">' + d + '</div><h3>' + window.__cnI('cal') + ' 오늘의 도전</h3>' +
       '<p><b>STAGE ' + (idx + 1) + ' · ' + h(S.name) + '</b><br><small>' + h(S.sub || '') + '</small></p>' +
       '<p style="font-size:14px">하루에 하나씩 바뀌는 판이에요. 아직 안 열린 판도 할 수 있어요!<br>오늘 처음 깨면 <b>엽전 +30</b> · 빨리 깰수록 순위가 올라가요</p>' +
       '<p>내 오늘 기록: <b>' + (mine == null ? '없음' : fmt(mine)) + '</b></p>' +
@@ -2687,7 +2689,7 @@
       return x.F.getDocs(x.F.query(x.F.collection(x.db, 'ranks'), x.F.where('dd', '==', d))).then(function (snap) {
         var rows = snap.docs.map(function (r) { var v = r.data(); return { n: v.nick || '닌자', t: Number(v.dt), me: r.id === me }; }).filter(function (r) { return r.t > 0; }).sort(function (a, b) { return a.t - b.t; }).slice(0, 10);
         var el = document.getElementById('cnDailyList'); if (!el) return;
-        el.innerHTML = rows.length ? rows.map(function (r, i) { return '<div class="' + (r.me ? 'me' : '') + '"><span>' + (i < 3 ? ['🥇', '🥈', '🥉'][i] : (i + 1) + '.') + ' ' + h(r.n) + '</span><b>' + fmt(r.t) + '</b></div>'; }).join('') : '<div><span>아직 아무도 안 깼어요. 1등 해 보세요!</span></div>';
+        el.innerHTML = rows.length ? rows.map(function (r, i) { return '<div class="' + (r.me ? 'me' : '') + '"><span>' + (i < 3 ? window.__cnI('medal' + (i + 1)) : (i + 1) + '.') + ' ' + h(r.n) + '</span><b>' + fmt(r.t) + '</b></div>'; }).join('') : '<div><span>아직 아무도 안 깼어요. 1등 해 보세요!</span></div>';
       });
     }).catch(function () { var el = document.getElementById('cnDailyList'); if (el) el.innerHTML = '<div><span>순위는 로그인하면 볼 수 있어요</span></div>'; });
   }
@@ -2701,7 +2703,7 @@
       var card = document.getElementById('mcard'); if (!card) return;
       var nx = card.querySelector('[data-act="next"]'); if (nx) nx.remove();
       var div = document.createElement('div'); div.style.cssText = 'background:#e8f0ff;border-radius:12px;padding:8px 10px;margin:8px 0 2px;font-size:15px;text-align:center;color:#2b3a6b';
-      div.innerHTML = '📅 오늘의 도전 ' + fmt(t) + (prev == null || t < prev ? ' · <span>오늘 최고!</span>' : '') + (first ? ' · 엽전 +30' : '');
+      div.innerHTML = window.__cnI('cal') + ' 오늘의 도전 ' + fmt(t) + (prev == null || t < prev ? ' · <span>오늘 최고!</span>' : '') + (first ? ' · 엽전 +30' : '');
       var earn = card.querySelector('.earn'); earn ? earn.after(div) : card.appendChild(div);
     }, 1650);
   }
@@ -2711,8 +2713,8 @@
     var sv = E('save'), others = (window.__otherStatues ? window.__otherStatues() : []).slice(0, 20), list = [];
     if (sv.cnStatue) list.push({ mine: true, nick: '내 동상' });
     others.forEach(function (o) { list.push(o); });
-    var o = overlay('<h3>🗿 동상 마을</h3><p style="font-size:14px">동상을 세운 닌자들이에요. 마음에 드는 동상에 하트를 눌러 주세요!</p>' +
-      (list.length ? '<div class="cnGrid">' + list.map(function (it, i) { return '<div class="cnTile"><canvas width="280" height="230" data-i="' + i + '"></canvas><b>' + h(it.nick) + '</b>' + (it.mine ? '<span class="cnHeart" data-mine="1">♥ <span>…</span></span>' : '<button class="cnHeart" data-u="' + h(it.uid) + '">♥ <span>…</span></button>') + '</div>'; }).join('') + '</div>'
+    var o = overlay('<h3>' + window.__cnI('statue') + ' 동상 마을</h3><p style="font-size:14px">동상을 세운 닌자들이에요. 마음에 드는 동상에 하트를 눌러 주세요!</p>' +
+      (list.length ? '<div class="cnGrid">' + list.map(function (it, i) { return '<div class="cnTile"><canvas width="280" height="230" data-i="' + i + '"></canvas><b>' + h(it.nick) + '</b>' + (it.mine ? '<span class="cnHeart" data-mine="1">' + window.__cnI('heart') + ' <span>…</span></span>' : '<button class="cnHeart" data-u="' + h(it.uid) + '">' + window.__cnI('heart') + ' <span>…</span></button>') + '</div>'; }).join('') + '</div>'
         : '<p>아직 동상을 세운 사람이 없어요. 상점의 동상 탭에서 처음으로 세워 보세요!</p>') +
       '<div class="cnRow"><button class="cnB alt" data-v="x">닫기</button></div>');
     o.querySelectorAll('canvas').forEach(function (cv) {
@@ -2755,7 +2757,7 @@
   var waitLobby = setInterval(function () {
     var box = document.querySelector('#lobby .lobbyBtns'); if (!box) return; clearInterval(waitLobby);
     var row = document.createElement('div'); row.className = 'row'; row.id = 'cnExtra';
-    row.innerHTML = '<button class="mid" id="btnDaily"><span class="lbl">📅 오늘의 도전</span><b class="dot hide" id="dailyDot"></b></button><button class="mid" id="btnVillage"><span class="lbl">🗿 동상 마을</span></button>';
+    row.innerHTML = '<button class="mid" id="btnDaily"><span class="lbl">오늘의 도전</span><b class="dot hide" id="dailyDot"></b></button><button class="mid" id="btnVillage"><span class="lbl">동상 마을</span></button>';
     box.appendChild(row);
     document.getElementById('btnDaily').addEventListener('click', function () { sfx(); openDaily(); });
     document.getElementById('btnVillage').addEventListener('click', function () { sfx(); openVillage(); });
@@ -2793,8 +2795,8 @@
           if (note) body.insertBefore(row, note); else body.appendChild(row);
         }
         add('조작 방법 보기', '▶ 보기', function () { showTutorial(); });
-        if (E('save').cnEnding) add('엔딩 다시 보기', '👑 보기', function () { playEnding(false); });
-        add('버그 신고 · 의견 보내기', '🐞 쓰기', openReport);
+        if (E('save').cnEnding) add('엔딩 다시 보기', window.__cnI('crown') + ' 보기', function () { playEnding(false); });
+        add('버그 신고 · 의견 보내기', window.__cnI('bug') + ' 쓰기', openReport);
       } catch (_) {}
       return r;
     };
@@ -2832,14 +2834,14 @@
   function renderProg() {
     var el = document.getElementById('cnProg'); if (!el) return;
     var sv = E('save'), n = cleared(), got = sv.cnMile || 0, can = Math.floor(n / MILE) > got, nextAt = (got + 1) * MILE;
-    var html = '<span>🏯 ' + n + '/250</span><div class="bar"><i style="width:' + (n / 2.5) + '%"></i></div>' +
-      (can ? '<button id="cnMileBtn">🎁 ' + (got + 1) * MILE + '판 보상</button>' : (nextAt <= 250 ? '<span class="nx">🎁 ' + nextAt + '판까지 ' + (nextAt - n) + '판</span>' : '<span class="nx">👑 완주!</span>'));
+    var html = '<span>' + window.__cnI('tower') + ' ' + n + '/250</span><div class="bar"><i style="width:' + (n / 2.5) + '%"></i></div>' +
+      (can ? '<button id="cnMileBtn">' + window.__cnI('gift') + ' ' + (got + 1) * MILE + '판 보상</button>' : (nextAt <= 250 ? '<span class="nx">' + window.__cnI('gift') + ' ' + nextAt + '판까지 ' + (nextAt - n) + '판</span>' : '<span class="nx">' + window.__cnI('crown') + ' 완주!</span>'));
     if (el.__h !== html) { el.innerHTML = html; el.__h = html; }
   }
   document.addEventListener('click', function (e) {
     if (!e.target.closest || !e.target.closest('#cnMileBtn')) return;
     var sv = E('save'); if (Math.floor(cleared() / MILE) <= (sv.cnMile || 0)) return;
-    sv.cnMile = (sv.cnMile || 0) + 1; sv.coins += MREW; persist(); sfx('coin'); toast('🎁 ' + sv.cnMile * MILE + '판 달성! 엽전 +' + MREW); renderProg();
+    sv.cnMile = (sv.cnMile || 0) + 1; sv.coins += MREW; persist(); sfx('coin'); toast(sv.cnMile * MILE + '판 달성! 엽전 +' + MREW); renderProg();
   });
 
   // ───── 로비 아이콘 메뉴 ─────
@@ -2848,10 +2850,10 @@
     if (!box || ids.some(function (id) { return !document.getElementById(id); })) return; clearInterval(build);
     var menu = document.createElement('div'); menu.id = 'cnMenu';
     var r1 = document.createElement('div'), r2 = document.createElement('div'); r1.className = r2.className = 'cnMrow'; menu.appendChild(r1); menu.appendChild(r2);
-    var label = { btnAch: '미션', btnBz: ['⚔️', '광전사'], btnDaily: ['📅', '오늘의 도전'], btnVillage: ['🗿', '동상 마을'] };
+    var label = { btnAch: '미션', btnBz: ['swords', '광전사'], btnDaily: ['cal', '오늘의 도전'], btnVillage: ['statue', '동상 마을'] };
     ids.forEach(function (id) {
       var b = document.getElementById(id), row = b.parentNode, l = b.querySelector('.lbl'), L = label[id];
-      if (l && Array.isArray(L)) l.innerHTML = '<span class="em">' + L[0] + '</span>' + L[1];
+      if (l && Array.isArray(L)) l.innerHTML = window.__cnI(L[0]) + L[1];
       else if (l && L) { var ic = l.querySelector('i,svg'); l.textContent = ''; if (ic) l.appendChild(ic); l.appendChild(document.createTextNode(L)); }
       if (id === 'btnBz') b.classList.add('bz');
       (ids.indexOf(id) < 4 ? r1 : r2).appendChild(b);
@@ -2889,4 +2891,251 @@
     } catch (_) {}
     requestAnimationFrame(tick);
   })();
+})();
+
+// ── 직접 그린 아이콘 (이모티콘 대신): 게임 아이콘처럼 굵은 검은 외곽선 그림체 ──
+(function () {
+  var K = '#141418';
+  function svg(b) { return '<svg viewBox="0 0 24 24" aria-hidden="true" stroke-linejoin="round" stroke-linecap="round">' + b + '</svg>'; }
+  var M = {
+    x: svg('<path d="M6 6 L18 18 M18 6 L6 18" stroke="' + K + '" stroke-width="5.4" fill="none"/><path d="M6 6 L18 18 M18 6 L6 18" stroke="#fff" stroke-width="2.4" fill="none"/>'),
+    swords: svg('<path d="M4 4 L15 15 M20 4 L9 15" stroke="' + K + '" stroke-width="5"/><path d="M4 4 L15 15 M20 4 L9 15" stroke="#e8edf5" stroke-width="2.4"/><path d="M12.5 17.5 L17.5 12.5 M6.5 12.5 L11.5 17.5" stroke="' + K + '" stroke-width="2.4"/><path d="M15 15 L19.5 19.5 M9 15 L4.5 19.5" stroke="' + K + '" stroke-width="4.6"/><path d="M15 15 L19.5 19.5 M9 15 L4.5 19.5" stroke="#8a5a32" stroke-width="2.2"/>'),
+    cal: svg('<rect x="3.5" y="5" width="17" height="15.5" rx="2.6" fill="#fff4dc" stroke="' + K + '" stroke-width="2"/><path d="M3.5 7.6 A2.6 2.6 0 0 1 6.1 5 H17.9 A2.6 2.6 0 0 1 20.5 7.6 V10 H3.5 Z" fill="#e8333a" stroke="' + K + '" stroke-width="2"/><path d="M8 3 V7 M16 3 V7" stroke="' + K + '" stroke-width="2.4"/><rect x="7" y="12.5" width="3.4" height="3" rx=".8" fill="#ffd23f" stroke="' + K + '" stroke-width="1.3"/><path d="M13 14 H17 M7.5 18 H16" stroke="#c9b48a" stroke-width="1.6"/>'),
+    statue: svg('<rect x="4.5" y="17" width="15" height="4" rx="1" fill="#b9b4aa" stroke="' + K + '" stroke-width="1.8"/><rect x="6.5" y="14.8" width="11" height="2.4" fill="#d8d3c8" stroke="' + K + '" stroke-width="1.6"/><path d="M8.4 14.8 Q8 10 12 9.6 Q16 10 15.6 14.8 Z" fill="#9a958b" stroke="' + K + '" stroke-width="1.7"/><circle cx="12" cy="6.6" r="3.9" fill="#9a958b" stroke="' + K + '" stroke-width="1.7"/><path d="M8.2 5.9 H15.8" stroke="#d8d3c8" stroke-width="1.8"/>'),
+    gift: svg('<rect x="4" y="10" width="16" height="10.5" rx="1.4" fill="#e8333a" stroke="' + K + '" stroke-width="2"/><rect x="3" y="7" width="18" height="4" rx="1.2" fill="#ff5a5f" stroke="' + K + '" stroke-width="2"/><path d="M12 7 V20.5" stroke="' + K + '" stroke-width="4.4"/><path d="M12 7 V20.5" stroke="#ffd23f" stroke-width="2.2"/><path d="M12 7 Q8 2.5 6.6 4.6 Q6 6.6 12 7 Q18 6.6 17.4 4.6 Q16 2.5 12 7" fill="#ffd23f" stroke="' + K + '" stroke-width="1.7"/>'),
+    crown: svg('<path d="M3.5 18 L3.5 8 L8.2 12.2 L12 5 L15.8 12.2 L20.5 8 L20.5 18 Z" fill="#ffd23f" stroke="' + K + '" stroke-width="2"/><rect x="3.5" y="17" width="17" height="3.2" rx="1" fill="#e0a800" stroke="' + K + '" stroke-width="1.8"/><circle cx="12" cy="13.6" r="1.6" fill="#e8333a" stroke="' + K + '" stroke-width="1"/>'),
+    heart: svg('<path d="M12 20 C5 15.2 2.8 11.6 3.6 8.4 C4.5 5 8.8 4 12 7.6 C15.2 4 19.5 5 20.4 8.4 C21.2 11.6 19 15.2 12 20 Z" fill="#ff4d6a" stroke="' + K + '" stroke-width="2.1"/><path d="M7 8.4 Q8 7 9.6 7.6" stroke="#ffd0d8" stroke-width="1.6" fill="none"/>'),
+    heartOff: svg('<path d="M12 20 C5 15.2 2.8 11.6 3.6 8.4 C4.5 5 8.8 4 12 7.6 C15.2 4 19.5 5 20.4 8.4 C21.2 11.6 19 15.2 12 20 Z" fill="#3a3a46" stroke="' + K + '" stroke-width="2.1"/>'),
+    bug: svg('<path d="M6 9 L3.5 7 M18 9 L20.5 7 M5.5 13 H2.8 M18.5 13 H21.2 M6 17 L3.5 19 M18 17 L20.5 19 M10 5 L8.6 2.8 M14 5 L15.4 2.8" stroke="' + K + '" stroke-width="2"/><ellipse cx="12" cy="13.5" rx="6.4" ry="7" fill="#3fd07a" stroke="' + K + '" stroke-width="2"/><path d="M12 7 V20.4" stroke="' + K + '" stroke-width="1.7"/><circle cx="12" cy="6.6" r="3" fill="#2c2c33" stroke="' + K + '" stroke-width="1.6"/><circle cx="9.4" cy="12" r="1.2" fill="' + K + '"/><circle cx="14.8" cy="15.6" r="1.2" fill="' + K + '"/>'),
+    run: svg('<circle cx="14.6" cy="5" r="2.7" fill="#2c2c33" stroke="' + K + '" stroke-width="1.6"/><path d="M12.4 4.4 H17" stroke="#e8edf5" stroke-width="1.4"/><path d="M13.6 8.4 L10.6 13.6 L14 16.4 L12.6 21 M10.6 13.6 L6.4 16.8 M13 9.6 L17.4 12 M12.6 9.8 L8.4 10.4" stroke="' + K + '" stroke-width="2.8" fill="none"/><path d="M2.8 9 H6 M1.8 12.6 H4.6" stroke="#4fa3ff" stroke-width="1.8"/>'),
+    jump: svg('<path d="M12 3 L18.6 10.2 H14.6 V14 H9.4 V10.2 H5.4 Z" fill="#3fd07a" stroke="' + K + '" stroke-width="2"/><path d="M12 11 L17.2 16.6 H14 V19 H10 V16.6 H6.8 Z" fill="#a6f0c0" stroke="' + K + '" stroke-width="1.8"/><path d="M5 21.4 H19" stroke="' + K + '" stroke-width="2"/>'),
+    wall: svg('<rect x="13" y="2.5" width="8" height="19" fill="#c58a5a" stroke="' + K + '" stroke-width="2"/><path d="M13 7.2 H21 M13 12 H21 M13 16.8 H21 M17 2.5 V7.2 M17 12 V16.8 M15 7.2 V12 M19 7.2 V12 M15 16.8 V21.5 M19 16.8 V21.5" stroke="' + K + '" stroke-width="1.3"/><circle cx="8.6" cy="9" r="2.6" fill="#2c2c33" stroke="' + K + '" stroke-width="1.5"/><path d="M8.8 12 L10.6 15.6 L12.6 14 M9.6 13.6 L6.4 17 M10.4 12.6 L12.6 9.8" stroke="' + K + '" stroke-width="2.4" fill="none"/><path d="M5.2 4.6 L3.6 3 M4.4 7.4 L2.4 7" stroke="#ffd23f" stroke-width="1.6"/>'),
+    dash: svg('<path d="M9 5.5 L17.5 12 L9 18.5 Z" fill="#4fa3ff" stroke="' + K + '" stroke-width="2.1"/><path d="M14.4 5.5 L22 12 L14.4 18.5" fill="none" stroke="' + K + '" stroke-width="2.1"/><path d="M2 8.6 H6.6 M1.4 12 H7 M2 15.4 H6.6" stroke="' + K + '" stroke-width="2"/>'),
+    slash: svg('<path d="M5 19 L17.5 6.5" stroke="' + K + '" stroke-width="5"/><path d="M5 19 L17.5 6.5" stroke="#e8edf5" stroke-width="2.6"/><path d="M17.5 6.5 L20.2 3.8 L20.6 4.2" stroke="' + K + '" stroke-width="2"/><path d="M3.2 13.6 L7.8 18.2 M4.6 20.6 L2.2 18.2" stroke="' + K + '" stroke-width="2.4"/><path d="M8 3.4 Q16 1.8 21 9" fill="none" stroke="#e8333a" stroke-width="2"/>'),
+    flag: svg('<path d="M5.5 21.5 V3" stroke="' + K + '" stroke-width="2.6"/><path d="M6 3.6 H18.4 L15.6 7.6 L18.4 11.6 H6 Z" fill="#e8333a" stroke="' + K + '" stroke-width="2"/><circle cx="11" cy="7.6" r="1.8" fill="#fff" stroke="' + K + '" stroke-width="1.1"/><path d="M2.6 21.5 H9" stroke="' + K + '" stroke-width="2.2"/>'),
+    spark: svg('<path d="M12 2.6 L14 9.6 L21 12 L14 14.4 L12 21.4 L10 14.4 L3 12 L10 9.6 Z" fill="#ffd23f" stroke="' + K + '" stroke-width="1.8"/><path d="M19 3.4 L19.7 5.3 L21.6 6 L19.7 6.7 L19 8.6 L18.3 6.7 L16.4 6 L18.3 5.3 Z" fill="#fff" stroke="' + K + '" stroke-width="1"/>'),
+    star: svg('<path d="M12 2.8 L14.7 8.4 L20.8 9.2 L16.3 13.4 L17.5 19.4 L12 16.4 L6.5 19.4 L7.7 13.4 L3.2 9.2 L9.3 8.4 Z" fill="#ffd23f" stroke="' + K + '" stroke-width="2"/>'),
+    fire: svg('<path d="M12 21.2 C7 21.2 4.8 17.6 5.4 13.8 C6 10.2 9 8.6 9.2 4.4 C12.4 6.4 13.4 9 13.2 11 C14.4 10.2 15 8.8 14.8 7.4 C18 9.8 19.6 13.6 18.6 16.6 C17.8 19.4 15.4 21.2 12 21.2 Z" fill="#ff7a2a" stroke="' + K + '" stroke-width="2"/><path d="M12 20.6 C9.6 20.6 8.6 18.8 9 17 C9.4 15.4 11 14.6 11.2 12.6 C13.2 14 14.6 15.8 14.4 17.6 C14.2 19.4 13.4 20.6 12 20.6 Z" fill="#ffd23f"/>'),
+    share: svg('<circle cx="18" cy="5.6" r="3" fill="#4fa3ff" stroke="' + K + '" stroke-width="1.8"/><circle cx="6" cy="12" r="3" fill="#4fa3ff" stroke="' + K + '" stroke-width="1.8"/><circle cx="18" cy="18.4" r="3" fill="#4fa3ff" stroke="' + K + '" stroke-width="1.8"/><path d="M8.6 10.6 L15.4 7 M8.6 13.4 L15.4 17" stroke="' + K + '" stroke-width="2"/>'),
+    vs: svg('<path d="M3 5 L7 17 L11 5" fill="none" stroke="' + K + '" stroke-width="4.2"/><path d="M3 5 L7 17 L11 5" fill="none" stroke="#e8333a" stroke-width="2"/><path d="M20.4 6.4 Q19 4.6 16.6 5 Q14 5.6 14.4 8 Q14.8 10 17.4 10.8 Q20.4 11.8 20 14.6 Q19.4 17.4 16.2 17 Q14 16.6 13.4 14.8" fill="none" stroke="' + K + '" stroke-width="4.2"/><path d="M20.4 6.4 Q19 4.6 16.6 5 Q14 5.6 14.4 8 Q14.8 10 17.4 10.8 Q20.4 11.8 20 14.6 Q19.4 17.4 16.2 17 Q14 16.6 13.4 14.8" fill="none" stroke="#4fa3ff" stroke-width="2"/>'),
+    target: svg('<circle cx="12" cy="12" r="9" fill="#fff" stroke="' + K + '" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="#e8333a" stroke="' + K + '" stroke-width="1.6"/><circle cx="12" cy="12" r="2.8" fill="#fff" stroke="' + K + '" stroke-width="1.4"/>')
+  };
+  window.__cnIcons = M;
+  window.__cnI = function (n) { var G = {}; try { G = (0, eval)('ICONS'); } catch (_) {} var s = M[n] || G[n] || ''; return '<i class="ic cnI">' + s + '</i>'; };
+  var st = document.createElement('style');
+  st.textContent = '.ic.cnI{display:inline-block;width:1.2em;height:1.2em;vertical-align:-.25em;line-height:0}.ic.cnI svg{width:100%;height:100%;display:block}' +
+    '.cnBig .ic.cnI{width:64px;height:64px;vertical-align:middle}.cnCard h3 .ic.cnI{width:1.25em;height:1.25em}' +
+    '#cnMenu .mid .ic.cnI{width:26px !important;height:26px !important}#bossLives .ic.cnI{width:18px;height:18px;margin-left:2px}.bzX .ic.cnI{width:18px;height:18px}';
+  (document.head || document.documentElement).appendChild(st);
+})();
+
+// ── 재미 업그레이드: 도전장(친구 대결) + 자랑 카드, 주간 시즌 랭킹, 손맛 (매일 미션은 게임에 원래 있는 것을 써요) ──
+(function () {
+  var E = function (s) { return (0, eval)(s); };
+  var I = function (n) { return window.__cnI ? window.__cnI(n) : ''; };
+  function sfx(n) { try { E('SFX')[n || 'click'](); } catch (_) {} }
+  function h(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function kst() { return new Date(Date.now() + 9 * 3600e3); }
+  function today() { return kst().toISOString().slice(0, 10); }
+  function weekId(off) { var d = kst(); d.setUTCHours(0, 0, 0, 0); var wd = (d.getUTCDay() + 6) % 7; d.setUTCDate(d.getUTCDate() - wd - 7 * (off || 0)); return d.toISOString().slice(0, 10); }
+  function persist() { try { E('persist')(); } catch (_) {} try { E('refreshLobby')(); } catch (_) {} try { var w = document.getElementById('wallet'); if (w) w.textContent = E('save').coins; } catch (_) {} }
+  function toast(t) { try { E('showToast')(t, '#ffe27a'); } catch (_) {} }
+  function fbx() { return window.__cnFb ? window.__cnFb() : Promise.reject('no fb'); }
+  function fmt(t) { return (Math.round(t * 10) / 10).toFixed(1) + '초'; }
+  function nick() { try { var r = E('SRV'); if (r && r.nick) return r.nick; } catch (_) {} return '닌자'; }
+  function overlay(html) {
+    var o = document.createElement('div'); o.className = 'cnOv'; o.innerHTML = '<div class="cnCard">' + html + '</div>';
+    o.addEventListener('click', function (e) { if (e.target === o) o.remove(); });
+    document.body.appendChild(o); return o;
+  }
+  var css = document.createElement('style');
+  css.textContent = [
+    '.cnShareRow{display:flex;gap:8px;margin-top:8px}.cnShareRow button{flex:1;border:3px solid #141418;border-radius:14px;padding:10px 6px;font:inherit;font-size:16px;color:#fff;background:#3d7bff;box-shadow:0 4px 0 #141418;cursor:pointer}',
+    '.cnShareRow button.y{background:#ffb02e;color:#3a2400}',
+    '.cnVsLine{border-radius:12px;padding:9px 10px;margin:8px 0 2px;font-size:15.5px;text-align:center;border:2px solid #141418}',
+    '.cnWk{background:#2b3a6b;color:#fff;border:3px solid #141418;border-radius:14px;padding:10px;font:inherit;font-size:16px;width:100%;margin-bottom:10px;cursor:pointer;box-shadow:0 4px 0 #141418}',
+    '.cnChamp{display:flex;gap:6px;justify-content:center;margin:6px 0 10px;flex-wrap:wrap}.cnChamp span{background:#fff4dc;border:2px solid #141418;border-radius:12px;padding:4px 8px;font-size:13.5px}',
+    '.cnPop{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:70;pointer-events:none;font:900 34px Jua,sans-serif;color:#fff;-webkit-text-stroke:2px #141418;text-shadow:0 4px 0 #141418;animation:cnPop .7s ease-out forwards}',
+    '@keyframes cnPop{0%{transform:translate(-50%,-50%) scale(.4);opacity:0}25%{transform:translate(-50%,-50%) scale(1.25);opacity:1}100%{transform:translate(-50%,-90%) scale(1);opacity:0}}'
+  ].join('');
+  document.head.appendChild(css);
+
+  // ───── 1. 주간 시즌 점수 ─────
+  function addWeek(pts) {
+    var sv = E('save'), w = weekId(0); if (!sv.cnWk || sv.cnWk.w !== w) sv.cnWk = { w: w, p: 0 };
+    sv.cnWk.p += pts; persist();
+    var p = sv.cnWk.p;
+    fbx().then(function (x) { var u = x.auth.currentUser; if (!u || window.__cnAdmin) return; return x.F.setDoc(x.F.doc(x.db, 'ranks', u.uid), { wk: w, wp: p }, { merge: true }); }).catch(function () {});
+  }
+  function weekRows(w) {
+    return fbx().then(function (x) {
+      var me = x.auth.currentUser && x.auth.currentUser.uid;
+      return x.F.getDocs(x.F.query(x.F.collection(x.db, 'ranks'), x.F.where('wk', '==', w))).then(function (snap) {
+        return snap.docs.map(function (d) { var v = d.data(); return { uid: d.id, n: v.nick || '닌자', p: Number(v.wp) || 0, me: d.id === me }; }).filter(function (r) { return r.p > 0; }).sort(function (a, b) { return b.p - a.p; });
+      });
+    });
+  }
+  function openWeek() {
+    var sv = E('save'), w = weekId(0), mine = sv.cnWk && sv.cnWk.w === w ? sv.cnWk.p : 0;
+    var end = new Date(w + 'T00:00:00Z'); end.setUTCDate(end.getUTCDate() + 7); var left = Math.max(0, Math.ceil((end - kst()) / 86400000));
+    var o = overlay('<h3>' + I('trophy') + ' 이번 주 시즌</h3><p style="font-size:13.5px">월요일마다 새로 시작해요 · ' + left + '일 남음<br>처음 깨는 판 10점 · 다시 깨기 3점 · 보스 30점 · 오늘의 도전 20점</p>' +
+      '<p>내 점수: <b>' + mine + '점</b></p><div style="font-size:13px;color:#8a8270">지난주 챔피언</div><div class="cnChamp" id="cnChamp"><span>불러오는 중…</span></div>' +
+      '<div class="cnList" id="cnWkList"><div><span>순위 불러오는 중…</span></div></div><div class="cnRow"><button class="cnB alt" data-w="x">닫기</button></div>');
+    o.addEventListener('click', function (e) { if (e.target.closest('[data-w]')) { sfx(); o.remove(); } });
+    weekRows(w).then(function (rows) {
+      var el = document.getElementById('cnWkList'); if (!el) return;
+      el.innerHTML = rows.length ? rows.slice(0, 20).map(function (r, i) { return '<div class="' + (r.me ? 'me' : '') + '"><span>' + (i < 3 ? I('medal' + (i + 1)) : (i + 1) + '.') + ' ' + h(r.n) + '</span><b>' + r.p + '점</b></div>'; }).join('') : '<div><span>이번 주 첫 점수를 올려 보세요!</span></div>';
+    }).catch(function () { var el = document.getElementById('cnWkList'); if (el) el.innerHTML = '<div><span>순위는 로그인하면 볼 수 있어요</span></div>'; });
+    weekRows(weekId(1)).then(function (rows) {
+      var el = document.getElementById('cnChamp'); if (!el) return;
+      el.innerHTML = rows.length ? rows.slice(0, 3).map(function (r, i) { return '<span>' + I('medal' + (i + 1)) + ' ' + h(r.n) + ' · ' + r.p + '점</span>'; }).join('') : '<span>지난주 기록이 없어요</span>';
+    }).catch(function () { var el = document.getElementById('cnChamp'); if (el) el.innerHTML = '<span>-</span>'; });
+  }
+  window.__openWeek = openWeek;
+
+  // ───── 3. 손맛: 처치할 때 터지는 효과, 콤보 글자, 아슬아슬 피하기 ─────
+  function pop(t) { var d = document.createElement('div'); d.className = 'cnPop'; d.textContent = t; (document.getElementById('wrap') || document.body).appendChild(d); setTimeout(function () { d.remove(); }, 750); }
+  var combo = 0, lastK = 0, near = new WeakMap(), nearCD = 0;
+  var hookK = setInterval(function () {
+    var ok; try { ok = typeof E('onKill') === 'function'; } catch (_) { ok = false; } if (!ok) return; clearInterval(hookK);
+    var oKill = E('onKill');
+    window.onKill = function (p, x, y, e, how) {
+      var r = oKill.apply(this, arguments);
+      try {
+        var now = performance.now(); combo = now - lastK < 2500 ? combo + 1 : 1; lastK = now;
+        E('kick')(4 + Math.min(combo, 6), 0.05, 0.05);
+        E('sparks')(x, y, 14 + combo * 2, combo >= 5 ? '#ffd84a' : '#ffffff', 180);
+        E('ring')(x, y, 'rgba(255,255,255,.85)', 30 + combo * 4);
+        if (combo === 3) pop('3 COMBO!'); else if (combo === 5) { pop('5 COMBO!'); } else if (combo === 10) pop('10 COMBO!!');
+      } catch (_) {}
+      return r;
+    };
+  }, 300);
+  (function nearLoop() {
+    try {
+      if (E('mode') === 'play') {
+        var P = E('P'), en = E('enemies');
+        if (nearCD > 0) nearCD--;
+        if (P && !P.dead && en && !(P.invT > 0)) for (var i = 0; i < en.length; i++) {
+          var e = en[i]; if (e.dead) continue;
+          var dx = Math.abs((e.x + e.w / 2) - (P.x + P.w / 2)) - (e.w + P.w) / 2, dy = Math.abs((e.y + e.h / 2) - (P.y + P.h / 2)) - (e.h + P.h) / 2;
+          if (dx < 7 && dy < 7 && dx > -2 && dy > -2 && !near.has(e)) near.set(e, performance.now());
+        }
+        if (en) for (var j = 0; j < en.length; j++) {
+          var q = en[j], t0 = near.get(q);
+          if (t0 && t0 > 0 && performance.now() - t0 > 350) {
+            near.set(q, -1);
+            if (!q.dead && !P.dead && nearCD <= 0) { nearCD = 40; E('floatText')(P.x + P.w / 2, P.y - 30, '아슬! +1', '#9dffb0', 16); E('bonusCoins += 1'); try { E('tone')(1200, 0.08, 'triangle', 0.05, 1600); } catch (_) {} }
+          }
+        }
+      }
+    } catch (_) {}
+    requestAnimationFrame(nearLoop);
+  })();
+
+  // ───── 4. 도전장(친구 대결) + 자랑 카드 ─────
+  var vs = null, deaths0 = 0;
+  function enc(s) { try { return btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); } catch (_) { return ''; } }
+  function dec(s) { try { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return decodeURIComponent(escape(atob(s))); } catch (_) { return '닌자'; } }
+  function link(i, t) { return location.origin + location.pathname.replace(/[^/]*$/, '') + '?vs=' + i + '.' + Math.round(t * 10) + '.' + enc(nick().slice(0, 10)); }
+  function card(i, t, rankN) {
+    var cv = document.createElement('canvas'); cv.width = 720; cv.height = 960; var c = cv.getContext('2d'), S = E('STAGES')[i] || {};
+    var g = c.createLinearGradient(0, 0, 0, 960); g.addColorStop(0, '#2e3b6b'); g.addColorStop(1, '#3f9a5a'); c.fillStyle = g; c.fillRect(0, 0, 720, 960);
+    c.fillStyle = 'rgba(255,255,255,.08)'; for (var k = 0; k < 9; k++) { c.beginPath(); c.ellipse(80 + k * 80, 880 - (k % 3) * 30, 90, 30, 0, 0, 6.283); c.fill(); }
+    c.textAlign = 'center'; c.lineJoin = 'round';
+    function txt(s, y, size, col, sw) { c.font = size + 'px Jua, sans-serif'; c.lineWidth = sw || 10; c.strokeStyle = '#141418'; c.strokeText(s, 360, y); c.fillStyle = col; c.fillText(s, 360, y); }
+    txt('구름발 닌자', 110, 64, '#fff');
+    txt('STAGE ' + (i + 1) + ' · ' + (S.name || ''), 190, 34, '#fff3c4', 7);
+    c.fillStyle = '#fffaf0'; c.strokeStyle = '#141418'; c.lineWidth = 8; c.beginPath(); c.roundRect ? c.roundRect(110, 560, 500, 230, 30) : c.rect(110, 560, 500, 230); c.fill(); c.stroke();
+    c.font = '34px Jua, sans-serif'; c.fillStyle = '#6a6070'; c.fillText(nick() + '의 기록', 360, 615);
+    c.font = '96px Jua, sans-serif'; c.fillStyle = '#2b2b3a'; c.fillText(fmt(t), 360, 715);
+    if (rankN) { c.font = '34px Jua, sans-serif'; c.fillStyle = '#e8333a'; c.fillText(rankN, 360, 765); }
+    txt('나를 이겨 봐!', 880, 54, '#ffd23f');
+    return new Promise(function (res) {
+      var done = function () { cv.toBlob(function (b) { res(b); }, 'image/png'); };
+      try {
+        var sv = E('save');
+        (window.__charSrc ? window.__charSrc(sv.cnChar || 'basic') : Promise.reject()).then(function (src) {
+          var im = new Image(); im.onload = function () { var hh = 300, ww = hh * im.width / im.height; c.drawImage(im, 360 - ww / 2, 230, ww, hh); done(); }; im.onerror = done; im.src = src;
+        }).catch(done);
+      } catch (_) { done(); }
+    });
+  }
+  window.__cnCard = card;
+  function shareRun(i, t, rankN, btn) {
+    var url = link(i, t), text = '구름발 닌자 STAGE ' + (i + 1) + '을 ' + fmt(t) + '에 깼어! 나를 이겨 봐';
+    btn.disabled = true;
+    card(i, t, rankN).then(function (blob) {
+      var file = blob ? new File([blob], 'gureumbal-ninja.png', { type: 'image/png' }) : null;
+      var data = { title: '구름발 닌자 도전장', text: text, url: url };
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) data.files = [file];
+      if (navigator.share) return navigator.share(data).catch(function () {});
+      if (blob) { var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'gureumbal-ninja.png'; a.click(); }
+      return (navigator.clipboard ? navigator.clipboard.writeText(text + ' ' + url) : Promise.reject()).then(function () { toast('자랑 카드를 저장하고 도전장 링크를 복사했어요'); }, function () { prompt('도전장 링크를 복사해서 보내 주세요', url); });
+    }).then(function () { btn.disabled = false; }, function () { btn.disabled = false; });
+  }
+  // 받은 도전장
+  var q = /[?&]vs=(\d+)\.(\d+)\.([A-Za-z0-9_-]+)/.exec(location.search);
+  if (q) {
+    var inv = { idx: +q[1], t: +q[2] / 10, nick: dec(q[3]) };
+    try { history.replaceState(null, '', location.pathname); } catch (_) {}
+    var waitVs = setInterval(function () {
+      var ok = false; try { ok = E('mode') === 'lobby' && E('STAGES').length > inv.idx && !(document.getElementById('login') && !document.getElementById('login').classList.contains('hide')) && document.getElementById('cnMenu'); } catch (_) {}
+      if (!ok) return; clearInterval(waitVs);
+      var S = E('STAGES')[inv.idx];
+      var o = overlay('<div class="cnBig">' + I('vs') + '</div><h3>도전장이 왔어요!</h3><p><b>' + h(inv.nick) + '</b> 님이<br><b>STAGE ' + (inv.idx + 1) + ' · ' + h(S.name) + '</b>을<br><b style="font-size:22px;color:#e8333a">' + fmt(inv.t) + '</b>에 깼어요</p><p style="font-size:14px">이 기록을 이겨 보세요! (아직 안 열린 판도 할 수 있어요)</p>' +
+        '<div class="cnRow"><button class="cnB alt" data-v="x">나중에</button><button class="cnB" data-v="go">도전!</button></div>');
+      o.addEventListener('click', function (e) { var b = e.target.closest('[data-v]'); if (!b) return; sfx(); o.remove(); if (b.dataset.v === 'go') { vs = inv; try { E('goStage')(inv.idx); } catch (_) {} } });
+    }, 500);
+  }
+
+  // ───── 판 깨기 연결: 미션, 시즌 점수, 도전장 결과, 자랑 버튼 ─────
+  var hook = setInterval(function () {
+    var cs, st; try { cs = E('clearStage'); st = E('startStage'); } catch (_) { return; }
+    if (typeof cs !== 'function' || typeof st !== 'function' || !window.__openVillage) return; clearInterval(hook);
+    window.startStage = function (i) { if (vs && i !== vs.idx) vs = null; try { deaths0 = E('deaths') || 0; } catch (_) { deaths0 = 0; } return st.apply(this, arguments); };
+    window.clearStage = function () {
+      var i = E('stageIdx'), sv = E('save'), endless = E('ENDLESS'), first = !(sv.best && sv.best['s' + i]), unl = sv.unlocked;
+      var gc = 0, gs = 0, dd = 0, dailyWas = sv.cnDaily; try { gc = E('gotCoins') || 0; gs = E('gotScrolls') || 0; dd = (E('deaths') || 0) - deaths0; } catch (_) {}
+      var mine = vs && vs.idx === i ? vs : null;
+      var r = cs.apply(this, arguments);
+      if (endless) return r;
+      try {
+        if (mine && i >= unl && sv.unlocked > unl) { sv.unlocked = unl; persist(); }
+        var t = E('runTime'), S = E('STAGES')[i] || {};
+        addWeek(first ? 10 : 3); if (i % 25 === 24) addWeek(30);
+        setTimeout(function () { if (E('save').cnDaily === today() && dailyWas !== today()) addWeek(20); }, 50);
+        setTimeout(function () {
+          var cardEl = document.getElementById('mcard'); if (!cardEl) return;
+          if (mine) {
+            var nx = cardEl.querySelector('[data-act="next"]'); if (nx) nx.remove();
+            var win = t < mine.t, d = Math.abs(t - mine.t);
+            var line = document.createElement('div'); line.className = 'cnVsLine'; line.style.background = win ? '#e4fbe4' : '#ffe8e8';
+            line.innerHTML = I('vs') + ' ' + (win ? '<b>승리!</b> ' + h(mine.nick) + ' 님보다 ' + fmt(d) + ' 빨라요' : '<b>아쉽다!</b> ' + h(mine.nick) + ' 님보다 ' + fmt(d) + ' 느려요. 다시!');
+            var earn0 = cardEl.querySelector('.earn'); earn0 ? earn0.after(line) : cardEl.appendChild(line);
+            if (win) { try { E('SFX').mission(); } catch (_) {} pop('승리!'); }
+          }
+          if (cardEl.querySelector('.cnShareRow')) return;
+          var row = document.createElement('div'); row.className = 'cnShareRow';
+          row.innerHTML = '<button class="y">' + I('share') + ' 자랑 · 도전장 보내기</button>';
+          var b = E('save').best['s' + i], RK = null; try { RK = b && E('RANKS')[b.rank]; } catch (_) {}
+          row.firstChild.addEventListener('click', function (ev) { ev.stopPropagation(); sfx(); shareRun(i, t, RK ? RK.n : '', row.firstChild); });
+          var btns = cardEl.querySelector('.row2'); btns ? btns.parentNode.insertBefore(row, btns) : cardEl.appendChild(row);
+        }, 1750);
+      } catch (_) {}
+      return r;
+    };
+  }, 300);
+
+  // ───── 랭킹 창에 시즌 버튼 ─────
+  var hook2 = setInterval(function () {
+    var rk = document.getElementById('btnRank'); if (!rk) return; clearInterval(hook2);
+    function addWk() {
+      var body = document.getElementById('sheetBody'); if (!body || body.querySelector('.cnWk')) return;
+      var b = document.createElement('button'); b.className = 'cnWk'; b.innerHTML = I('trophy') + ' 이번 주 시즌 랭킹 보기';
+      b.addEventListener('click', function () { sfx(); try { E('closeSheet')(); } catch (_) {} setTimeout(openWeek, 200); });
+      body.insertBefore(b, body.firstChild);
+    }
+    rk.addEventListener('click', function () { [80, 600, 1500, 3000].forEach(function (ms) { setTimeout(addWk, ms); }); });
+  }, 400);
 })();
